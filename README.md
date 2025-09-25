@@ -1,4 +1,4 @@
-# Zenith Task: A Minimalist Todo Platform
+# Zenith Task: A Minimalist Todo Platform with Email Reminders
 
 Zenith Task is a visually stunning, minimalist, and highly interactive todo list application designed to enhance productivity through an elegant and intuitive user experience. The application features a clean two-column layout: a sidebar for project navigation and a main content area for managing tasks. Users can create projects, add tasks with details like priority and due dates, and track their progress seamlessly. The entire experience is enhanced with subtle micro-interactions and smooth animations, making task management not just efficient, but delightful.
 
@@ -7,6 +7,8 @@ Zenith Task is a visually stunning, minimalist, and highly interactive todo list
 - **Minimalist & Modern UI**: A clean, uncluttered interface that helps you focus on your tasks.
 - **Project Management**: Organize your tasks into different projects for better clarity.
 - **Full Task CRUD**: Create, read, update, and delete tasks with ease.
+- **Email Reminders**: Get email notifications for your tasks with customizable reminder times.
+- **SMTP Integration**: Full SMTP support with connection testing and email templates.
 - **Interactive Experience**: Smooth animations, hover states, and micro-interactions make using the app a delight.
 - **Responsive Design**: Flawless performance and layout across all device sizes, from mobile to desktop.
 - **Fast & Responsive**: Optimized for speed and performance across all devices.
@@ -14,11 +16,13 @@ Zenith Task is a visually stunning, minimalist, and highly interactive todo list
 ## Technology Stack
 
 - **Frontend**: React, Vite, Tailwind CSS, shadcn/ui
+- **Backend**: Node.js, Express, Nodemailer
 - **State Management**: Zustand
 - **Storage**: Local storage and state management
 - **UI & Animation**: Framer Motion, Lucide React
+- **Email**: SMTP with HTML templates and cron jobs
 - **Language**: TypeScript
-- **Runtime & Package Manager**: Bun
+- **Runtime & Package Manager**: Bun (frontend), npm (backend)
 
 ## Getting Started
 
@@ -26,30 +30,78 @@ Follow these instructions to get the project up and running on your local machin
 
 ### Prerequisites
 
-- [Bun](https://bun.sh/) installed on your machine.
+- [Bun](https://bun.sh/) installed on your machine (for frontend)
+- [Node.js](https://nodejs.org/) installed on your machine (for backend)
+- SMTP email account (Gmail recommended)
 
-### Installation
+### Quick Start
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/chartmann1590/Zenith-Task-A-Minimalist-Todo.git
-    cd zenith-task
-    ```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/chartmann1590/Zenith-Task-A-Minimalist-Todo.git
+   cd zenith-task
+   ```
 
-2.  **Install dependencies:**
-    ```bash
-    bun install
-    ```
+2. **Start both frontend and backend:**
+   ```bash
+   ./start-dev.sh
+   ```
+
+This will automatically:
+- Install backend dependencies
+- Start the backend server on port 3001
+- Start the frontend development server on port 3000
+- Open the application in your browser
+
+### Manual Setup
+
+If you prefer to set up manually:
+
+1. **Install frontend dependencies:**
+   ```bash
+   bun install
+   ```
+
+2. **Set up backend:**
+   ```bash
+   cd backend
+   npm install
+   cp .env.example .env
+   # Edit .env with your SMTP settings
+   npm run dev
+   ```
+
+3. **Start frontend:**
+   ```bash
+   bun run dev
+   ```
+
+### Email Configuration
+
+1. **Gmail Setup (Recommended):**
+   - Enable 2-Factor Authentication on your Google account
+   - Generate an App Password: Google Account → Security → 2-Step Verification → App passwords
+   - Use the App Password in your backend `.env` file
+
+2. **Configure SMTP in the app:**
+   - Go to Settings page
+   - Enter your SMTP details
+   - Test the connection
+   - Send a test email
 
 ## Development
 
-To start the local development server, run the following command:
+The application consists of two parts:
 
-```bash
-bun run dev
-```
+- **Frontend**: React app running on `http://localhost:3000`
+- **Backend**: Node.js API server running on `http://localhost:3001`
 
-This will start the application, typically on `http://localhost:3000`. The frontend will hot-reload on changes.
+### Email Reminders
+
+- Set reminder times on your tasks
+- Enable reminders in the task settings
+- The backend automatically sends emails at the specified times
+- Beautiful HTML email templates with task details
 
 ### Project Structure
 

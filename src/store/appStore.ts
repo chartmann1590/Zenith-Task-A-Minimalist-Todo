@@ -22,13 +22,16 @@ type AppState = {
 
 type AppActions = {
   initializeApp: () => void;
-  updateSettings: (settings: SmtpSettings) => void;
+  updateSettings: (settings: SmtpSettings) => Promise<void>;
+  testSMTPConnection: () => Promise<boolean>;
+  sendTestEmail: (email: string) => Promise<boolean>;
   setActiveProjectId: (projectId: string) => void;
   // Task actions
   addTask: (title: string) => void;
   updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>) => void;
   deleteTask: (taskId: string) => void;
   reorderTasks: (oldIndex: number, newIndex: number) => void;
+  syncTasksWithBackend: () => Promise<void>;
   // Project actions
   addProject: (name: string) => void;
   updateProject: (projectId: string, name: string) => void;
@@ -39,6 +42,8 @@ type AppActions = {
   openDeleteDialog: (project: Project) => void;
   closeDeleteDialog: () => void;
 };
+
+const API_BASE_URL = 'http://localhost:3001/api';
 
 const initialState: AppState = {
   projects: [
@@ -73,9 +78,109 @@ export const useAppStore = create<AppState & AppActions>()(
       }, 500);
     },
 
-    updateSettings: (settings) => {
-      set({ smtpSettings: settings });
-      toast.success('Settings saved successfully!');
+    updateSettings: async (settings) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/smtp/settings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(settings),
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          set({ smtpSettings: settings });
+          toast.success('SMTP settings saved and tested successfully!');
+        } else {
+          toast.error(`Failed to save settings: ${result.error}`);
+          throw new Error(result.error);
+        }
+      } catch (error) {
+        console.error('Error updating SMTP settings:', error);
+        toast.error('Failed to save SMTP settings. Please check your configuration.');
+        throw error;
+      }
+    },
+
+    testSMTPConnection: async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/smtp/test`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = await response.json();
+        
+        if (result.success && result.data.success) {
+          toast.success('SMTP connection test successful!');
+          return true;
+        } else {
+          toast.error(`SMTP test failed: ${result.data?.error || 'Unknown error'}`);
+          return false;
+        }
+      } catch (error) {
+        console.error('Error testing SMTP connection:', error);
+        toast.error('Failed to test SMTP connection. Please check your settings.');
+        return false;
+      }
+    },
+
+    sendTestEmail: async (email: string) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/smtp/test-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          toast.success('Test email sent successfully! Check your inbox.');
+          return true;
+        } else {
+          toast.error(`Failed to send test email: ${result.error}`);
+          return false;
+        }
+      } catch (error) {
+        console.error('Error sending test email:', error);
+        toast.error('Failed to send test email. Please check your settings.');
+        return false;
+      }
+    },
+
+    syncTasksWithBackend: async () => {
+      try {
+        const { tasks } = get();
+        const tasksWithEmail = tasks.map(task => ({
+          ...task,
+          userEmail: 'user@example.com' // In a real app, this would come from user authentication
+        }));
+
+        const response = await fetch(`${API_BASE_URL}/tasks/sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ tasks: tasksWithEmail }),
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log(`Synced ${result.data.tasksCount} tasks and ${result.data.remindersCount} reminders`);
+        } else {
+          console.error('Failed to sync tasks:', result.error);
+        }
+      } catch (error) {
+        console.error('Error syncing tasks with backend:', error);
+      }
     },
 
     setActiveProjectId: (projectId: string) => {
@@ -84,7 +189,7 @@ export const useAppStore = create<AppState & AppActions>()(
     },
 
     addTask: (title: string) => {
-      const { activeProjectId, tasks } = get();
+      const { activeProjectId, tasks, syncTasksWithBackend } = get();
       if (!activeProjectId) {
         toast.error("No active project selected.");
         return;
@@ -107,23 +212,34 @@ export const useAppStore = create<AppState & AppActions>()(
       set((state) => {
         state.tasks.push(newTask);
       });
+      
+      // Sync with backend for reminders
+      syncTasksWithBackend();
       toast.success('Task added successfully!');
     },
 
     updateTask: (taskId, updates) => {
+      const { syncTasksWithBackend } = get();
       set((state) => {
         const taskIndex = state.tasks.findIndex((t) => t.id === taskId);
         if (taskIndex !== -1) {
           state.tasks[taskIndex] = { ...state.tasks[taskIndex], ...updates };
         }
       });
+      
+      // Sync with backend for reminders
+      syncTasksWithBackend();
       toast.success('Task updated successfully!');
     },
 
     deleteTask: (taskId: string) => {
+      const { syncTasksWithBackend } = get();
       set((state) => {
         state.tasks = state.tasks.filter((t) => t.id !== taskId);
       });
+      
+      // Sync with backend for reminders
+      syncTasksWithBackend();
       toast.success('Task deleted successfully!');
     },
 
