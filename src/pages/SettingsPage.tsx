@@ -22,6 +22,7 @@ export function SettingsPage() {
   const updateSettings = useAppStore((state) => state.updateSettings);
   const testSMTPConnection = useAppStore((state) => state.testSMTPConnection);
   const sendTestEmail = useAppStore((state) => state.sendTestEmail);
+  const loadSmtpSettings = useAppStore((state) => state.loadSmtpSettings);
   const [isTesting, setIsTesting] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   
@@ -34,6 +35,11 @@ export function SettingsPage() {
       pass: '',
     },
   });
+  useEffect(() => {
+    // Load SMTP settings when component mounts
+    loadSmtpSettings();
+  }, [loadSmtpSettings]);
+
   useEffect(() => {
     if (smtpSettings) {
       form.reset(smtpSettings);
@@ -81,7 +87,13 @@ export function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Application Settings</CardTitle>
-            <CardDescription>Configure SMTP settings for email reminders. Make sure your backend server is running on port 3001.</CardDescription>
+            <CardDescription>
+              Configure SMTP settings for email reminders. Make sure your backend server is running on port 3001.
+              <br />
+              <strong>Note:</strong> For Gmail, you'll need to use an App Password instead of your regular password.
+              <br />
+              Settings will be saved even if the connection test fails - you can test your credentials separately.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -135,6 +147,12 @@ export function SettingsPage() {
                         <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>
                       <FormMessage />
+                      <p className="text-sm text-muted-foreground">
+                        For Gmail: Use an App Password, not your regular password. 
+                        <a href="https://support.google.com/accounts/answer/185833" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
+                          Learn how to create one
+                        </a>
+                      </p>
                     </FormItem>
                   )}
                 />
