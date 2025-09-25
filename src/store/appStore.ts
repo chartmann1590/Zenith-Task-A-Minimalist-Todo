@@ -1,15 +1,16 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { Project, Task, SmtpSettings } from '@shared/types';
-import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
+
 type DialogState = {
   isProjectDialogOpen: boolean;
   editingProject: Project | null;
   isDeleteDialogOpen: boolean;
   deletingProject: Project | null;
 };
+
 type AppState = {
   projects: Project[];
   tasks: Task[];
@@ -18,270 +19,179 @@ type AppState = {
   error: string | null;
   smtpSettings: SmtpSettings | null;
 } & DialogState;
+
 type AppActions = {
-  fetchInitialData: () => Promise<void>;
-  fetchSettings: () => Promise<void>;
-  updateSettings: (settings: SmtpSettings) => Promise<void>;
+  initializeApp: () => void;
+  updateSettings: (settings: SmtpSettings) => void;
   setActiveProjectId: (projectId: string) => void;
   // Task actions
-  addTask: (title: string) => Promise<void>;
-  updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>) => Promise<void>;
-  deleteTask: (taskId: string) => Promise<void>;
-  reorderTasks: (oldIndex: number, newIndex: number) => Promise<void>;
+  addTask: (title: string) => void;
+  updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>) => void;
+  deleteTask: (taskId: string) => void;
+  reorderTasks: (oldIndex: number, newIndex: number) => void;
   // Project actions
-  addProject: (name: string) => Promise<void>;
-  updateProject: (projectId: string, name: string) => Promise<void>;
-  deleteProject: (projectId: string) => Promise<void>;
+  addProject: (name: string) => void;
+  updateProject: (projectId: string, name: string) => void;
+  deleteProject: (projectId: string) => void;
   // Dialog actions
   openProjectDialog: (project: Project | null) => void;
   closeProjectDialog: () => void;
   openDeleteDialog: (project: Project) => void;
   closeDeleteDialog: () => void;
 };
+
 const initialState: AppState = {
-  projects: [],
+  projects: [
+    { id: 'inbox-default-id', name: 'Inbox', createdAt: Date.now() },
+    { id: 'work-default-id', name: 'Work', createdAt: Date.now() }
+  ],
   tasks: [],
-  activeProjectId: null,
-  isLoading: true,
+  activeProjectId: 'inbox-default-id',
+  isLoading: false,
   error: null,
-  smtpSettings: null,
+  smtpSettings: {
+    host: '',
+    port: 587,
+    user: '',
+    pass: ''
+  },
   isProjectDialogOpen: false,
   editingProject: null,
   isDeleteDialogOpen: false,
   deletingProject: null,
 };
+
 export const useAppStore = create<AppState & AppActions>()(
   immer((set, get) => ({
     ...initialState,
-    fetchInitialData: async () => {
-      try {
-        set({ isLoading: true, error: null });
-        const projects = await api<Project[]>('/api/projects');
-        set({ projects });
-        if (projects.length > 0) {
-          const inboxProject = projects.find(p => p.name === 'Inbox') || projects[0];
-          set({ activeProjectId: inboxProject.id });
-          const tasks = await api<Task[]>(`/api/tasks?projectId=${inboxProject.id}`);
-          set({ tasks });
-        } else {
-          set({ tasks: [] });
-        }
-        await get().fetchSettings();
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch initial data';
-        set({ error: errorMessage });
-        toast.error(errorMessage);
-      } finally {
+    
+    initializeApp: () => {
+      set({ isLoading: true });
+      // Simulate loading time
+      setTimeout(() => {
         set({ isLoading: false });
-      }
+      }, 500);
     },
-    fetchSettings: async () => {
-        try {
-            const settings = await api<SmtpSettings>('/api/settings');
-            set({ smtpSettings: settings });
-        } catch (error) {
-            console.error("Could not fetch settings, maybe they are not set yet.");
-        }
+
+    updateSettings: (settings) => {
+      set({ smtpSettings: settings });
+      toast.success('Settings saved successfully!');
     },
-    updateSettings: async (settings) => {
-        const originalSettings = get().smtpSettings;
-        set({ smtpSettings: settings });
-        try {
-            await api('/api/settings', {
-                method: 'POST',
-                body: JSON.stringify(settings),
-            });
-        } catch (error) {
-            toast.error('Failed to update settings. Reverting.');
-            set({ smtpSettings: originalSettings });
-            throw error;
-        }
-    },
-    setActiveProjectId: async (projectId: string) => {
+
+    setActiveProjectId: (projectId: string) => {
       if (get().activeProjectId === projectId) return;
-      set({ activeProjectId: projectId, isLoading: true, error: null, tasks: [] });
-      try {
-        const tasks = await api<Task[]>(`/api/tasks?projectId=${projectId}`);
-        set({ tasks });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch tasks';
-        set({ error: errorMessage });
-        toast.error(errorMessage);
-      } finally {
-        set({ isLoading: false });
-      }
+      set({ activeProjectId: projectId });
     },
-    addTask: async (title: string) => {
+
+    addTask: (title: string) => {
       const { activeProjectId, tasks } = get();
       if (!activeProjectId) {
         toast.error("No active project selected.");
         return;
       }
-      const optimisticId = crypto.randomUUID();
+      
       const maxOrder = tasks.reduce((max, task) => Math.max(task.order, max), -1);
       const newTask: Task = {
-        id: optimisticId,
+        id: crypto.randomUUID(),
         title,
         completed: false,
         projectId: activeProjectId,
         createdAt: Date.now(),
         order: maxOrder + 1,
+        dueDate: null,
+        priority: null,
+        reminderEnabled: false,
+        reminderTime: null,
       };
+      
       set((state) => {
         state.tasks.push(newTask);
       });
-      try {
-        const createdTask = await api<Task>('/api/tasks', {
-          method: 'POST',
-          body: JSON.stringify({ title, projectId: activeProjectId, order: newTask.order }),
-        });
-        set((state) => {
-          const taskIndex = state.tasks.findIndex((t) => t.id === optimisticId);
-          if (taskIndex !== -1) {
-            state.tasks[taskIndex] = createdTask;
-          }
-        });
-      } catch (error) {
-        toast.error('Failed to add task. Reverting.');
-        set((state) => {
-          state.tasks = state.tasks.filter((t) => t.id !== optimisticId);
-        });
-      }
+      toast.success('Task added successfully!');
     },
-    updateTask: async (taskId, updates) => {
-      const originalTasks = get().tasks;
-      const taskIndex = originalTasks.findIndex((t) => t.id === taskId);
-      if (taskIndex === -1) return;
-      const updatedTask = { ...originalTasks[taskIndex], ...updates };
+
+    updateTask: (taskId, updates) => {
       set((state) => {
-        state.tasks[taskIndex] = updatedTask;
+        const taskIndex = state.tasks.findIndex((t) => t.id === taskId);
+        if (taskIndex !== -1) {
+          state.tasks[taskIndex] = { ...state.tasks[taskIndex], ...updates };
+        }
       });
-      try {
-        await api(`/api/tasks/${taskId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(updates),
-        });
-      } catch (error) {
-        toast.error('Failed to update task. Reverting.');
-        set({ tasks: originalTasks });
-      }
+      toast.success('Task updated successfully!');
     },
-    deleteTask: async (taskId: string) => {
-      const originalTasks = get().tasks;
+
+    deleteTask: (taskId: string) => {
       set((state) => {
         state.tasks = state.tasks.filter((t) => t.id !== taskId);
       });
-      try {
-        await api(`/api/tasks/${taskId}`, { method: 'DELETE' });
-      } catch (error) {
-        toast.error('Failed to delete task. Reverting.');
-        set({ tasks: originalTasks });
-      }
+      toast.success('Task deleted successfully!');
     },
-    reorderTasks: async (oldIndex: number, newIndex: number) => {
-      const originalTasks = get().tasks;
-      const reorderedTasks = arrayMove(originalTasks, oldIndex, newIndex).map((task, index) => ({
-        ...task,
-        order: index,
-      }));
-      set({ tasks: reorderedTasks });
-      try {
-        await Promise.all(
-          reorderedTasks.map(task =>
-            api(`/api/tasks/${task.id}`, {
-              method: 'PATCH',
-              body: JSON.stringify({ order: task.order }),
-            })
-          )
-        );
-      } catch (error) {
-        toast.error('Failed to save new task order. Reverting.');
-        set({ tasks: originalTasks });
-      }
+
+    reorderTasks: (oldIndex: number, newIndex: number) => {
+      set((state) => {
+        const reorderedTasks = arrayMove(state.tasks, oldIndex, newIndex).map((task, index) => ({
+          ...task,
+          order: index,
+        }));
+        state.tasks = reorderedTasks;
+      });
+      toast.success('Tasks reordered successfully!');
     },
-    addProject: async (name: string) => {
-      const optimisticId = crypto.randomUUID();
+
+    addProject: (name: string) => {
       const newProject: Project = {
-        id: optimisticId,
+        id: crypto.randomUUID(),
         name,
         createdAt: Date.now(),
       };
+      
       set(state => {
         state.projects.push(newProject);
+        state.activeProjectId = newProject.id;
+        state.tasks = [];
       });
-      try {
-        const createdProject = await api<Project>('/api/projects', {
-          method: 'POST',
-          body: JSON.stringify({ name }),
-        });
-        set(state => {
-          const projectIndex = state.projects.findIndex(p => p.id === optimisticId);
-          if (projectIndex !== -1) {
-            state.projects[projectIndex] = createdProject;
-          }
-          state.activeProjectId = createdProject.id;
-          state.tasks = [];
-        });
-        toast.success(`Project "${createdProject.name}" created.`);
-      } catch (error) {
-        toast.error('Failed to create project.');
-        set(state => {
-          state.projects = state.projects.filter(p => p.id !== optimisticId);
-        });
-      }
+      toast.success(`Project "${newProject.name}" created.`);
     },
-    updateProject: async (projectId: string, name: string) => {
-      const originalProjects = get().projects;
-      const projectIndex = originalProjects.findIndex(p => p.id === projectId);
-      if (projectIndex === -1) return;
-      const updatedProject = { ...originalProjects[projectIndex], name };
+
+    updateProject: (projectId: string, name: string) => {
       set(state => {
-        state.projects[projectIndex] = updatedProject;
+        const projectIndex = state.projects.findIndex(p => p.id === projectId);
+        if (projectIndex !== -1) {
+          state.projects[projectIndex].name = name;
+        }
       });
-      try {
-        await api(`/api/projects/${projectId}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ name }),
-        });
-        toast.success(`Project renamed to "${name}".`);
-      } catch (error) {
-        toast.error('Failed to rename project.');
-        set({ projects: originalProjects });
-      }
+      toast.success(`Project renamed to "${name}".`);
     },
-    deleteProject: async (projectId: string) => {
+
+    deleteProject: (projectId: string) => {
       const { projects, activeProjectId } = get();
-      const originalProjects = projects;
+      
       set(state => {
         state.projects = state.projects.filter(p => p.id !== projectId);
+        state.tasks = state.tasks.filter(t => t.projectId !== projectId);
+        
         if (state.activeProjectId === projectId) {
           const inbox = state.projects.find(p => p.name === 'Inbox') || state.projects[0];
           state.activeProjectId = inbox ? inbox.id : null;
+          state.tasks = state.tasks.filter(t => t.projectId === state.activeProjectId);
         }
       });
-      const newActiveId = get().activeProjectId;
-      if (newActiveId) {
-        get().setActiveProjectId(newActiveId);
-      } else {
-        set({ tasks: [] });
-      }
-      try {
-        await api(`/api/projects/${projectId}`, { method: 'DELETE' });
-        toast.success('Project deleted.');
-      } catch (error) {
-        toast.error('Failed to delete project.');
-        set({ projects: originalProjects, activeProjectId });
-      }
+      
+      toast.success('Project deleted.');
     },
+
     openProjectDialog: (project) => {
       set({ isProjectDialogOpen: true, editingProject: project });
     },
+
     closeProjectDialog: () => {
       set({ isProjectDialogOpen: false, editingProject: null });
     },
+
     openDeleteDialog: (project) => {
       set({ isDeleteDialogOpen: true, deletingProject: project });
     },
+
     closeDeleteDialog: () => {
       set({ isDeleteDialogOpen: false, deletingProject: null });
     },

@@ -5,10 +5,10 @@ import { Toaster } from '@/components/ui/sonner';
 import { ProjectFormDialog } from '@/components/ProjectFormDialog';
 import { DeleteProjectDialog } from '@/components/DeleteProjectDialog';
 export function App() {
-  const fetchInitialData = useAppStore((state) => state.fetchInitialData);
+  const initializeApp = useAppStore((state) => state.initializeApp);
   useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+    initializeApp();
+  }, [initializeApp]);
   return (
     <>
       <Outlet />

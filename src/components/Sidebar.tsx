@@ -58,7 +58,7 @@ export function Sidebar() {
           </Link>
         </Button>
         <div className="mt-4 text-center text-xs text-muted-foreground">
-          <p>Built with ❤️ at Cloudflare</p>
+          <p>Built with ❤️ for productivity</p>
         </div>
       </div>
     </aside>
