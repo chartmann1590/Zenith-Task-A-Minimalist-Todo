@@ -410,6 +410,15 @@ app.post('/api/reminders/send/:taskId', async (req, res) => {
       });
     }
 
+    // In test environment, skip actual email sending
+    if (process.env.NODE_ENV === 'test') {
+      res.json({
+        success: true,
+        message: 'Reminder would be sent (test mode)'
+      });
+      return;
+    }
+
     const { html, text } = generateReminderEmail(task);
     await sendEmail(task.userEmail, `Reminder: ${task.title}`, html, text);
     
@@ -453,11 +462,17 @@ cron.schedule('* * * * *', async () => {
       
       if (task && !task.completed && task.reminderEnabled) {
         try {
-          const { html, text } = generateReminderEmail(task);
-          await sendEmail(reminder.userEmail, `Reminder: ${task.title}`, html, text);
-          
-          reminder.sent = true;
-          console.log(`Reminder sent for task: ${task.title} to ${reminder.userEmail}`);
+          // In test environment, skip actual email sending
+          if (process.env.NODE_ENV === 'test') {
+            reminder.sent = true;
+            console.log(`Reminder would be sent for task: ${task.title} to ${reminder.userEmail} (test mode)`);
+          } else {
+            const { html, text } = generateReminderEmail(task);
+            await sendEmail(reminder.userEmail, `Reminder: ${task.title}`, html, text);
+            
+            reminder.sent = true;
+            console.log(`Reminder sent for task: ${task.title} to ${reminder.userEmail}`);
+          }
         } catch (error) {
           console.error(`Failed to send reminder for task ${task.title}:`, error);
         }

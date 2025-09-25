@@ -1,0 +1,203 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  dependency-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        
+    - name: Install frontend dependencies
+      run: npm ci
+      
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Run npm audit (Frontend)
+      run: |
+        npm audit --audit-level=moderate --json > frontend-audit.json || true
+        npm audit --audit-level=moderate
+        
+    - name: Run npm audit (Backend)
+      run: |
+        cd backend
+        npm audit --audit-level=moderate --json > ../backend-audit.json || true
+        npm audit --audit-level=moderate
+        
+    - name: Upload audit results
+      uses: actions/upload-artifact@v4
+      with:
+        name: npm-audit-results
+        path: |
+          frontend-audit.json
+          backend-audit.json
+        retention-days: 30
+
+  code-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run CodeQL Analysis
+      uses: github/codeql-action/init@v3
+      with:
+        languages: javascript, typescript
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        cd backend && npm ci
+        
+    - name: Build application
+      run: npm run build
+      
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      
+    - name: Run Semgrep
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/secrets
+          p/owasp-top-ten
+        generateSarif: "1"
+        
+    - name: Upload Semgrep results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: semgrep.sarif
+
+  docker-security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build Docker images
+      run: |
+        docker build -f Dockerfile.frontend -t todo-frontend:security-test .
+        docker build -f backend/Dockerfile -t todo-backend:security-test ./backend
+        
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'todo-frontend:security-test'
+        format: 'sarif'
+        output: 'trivy-frontend-results.sarif'
+        
+    - name: Upload Trivy frontend scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-frontend-results.sarif'
+        category: trivy-frontend
+        
+    - name: Run Trivy vulnerability scanner (Backend)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'todo-backend:security-test'
+        format: 'sarif'
+        output: 'trivy-backend-results.sarif'
+        
+    - name: Upload Trivy backend scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-backend-results.sarif'
+        category: trivy-backend
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Run TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+  license-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        cd backend && npm ci
+        
+    - name: Check licenses (Frontend)
+      run: |
+        npx license-checker --summary --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;Unlicense' || echo "License check completed with findings"
+        
+    - name: Check licenses (Backend)
+      run: |
+        cd backend
+        npx license-checker --summary --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;Unlicense' || echo "License check completed with findings"
+
+  security-summary:
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-scan, docker-security, secrets-scan, license-scan]
+    if: always()
+    
+    steps:
+    - name: Security Scan Summary
+      run: |
+        echo "## 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Scan Type | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Dependency Scan | ${{ needs.dependency-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Code Analysis | ${{ needs.code-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Docker Security | ${{ needs.docker-security.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Secrets Scan | ${{ needs.secrets-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| License Check | ${{ needs.license-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📋 Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "- Review any security findings in the Security tab" >> $GITHUB_STEP_SUMMARY
+        echo "- Update dependencies if vulnerabilities are found" >> $GITHUB_STEP_SUMMARY
+        echo "- Review and address any code quality issues" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,138 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+        
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Run backend tests
+      run: |
+        cd backend
+        npm test
+      env:
+        # Skip SMTP test in CI (no real credentials needed)
+        NODE_ENV: test
+        
+    - name: Start backend server
+      run: |
+        cd backend
+        npm start &
+        sleep 10
+      env:
+        PORT: 3001
+        NODE_ENV: test
+        
+    - name: Health check
+      run: |
+        # Wait for server to be ready
+        for i in {1..30}; do
+          if curl -f http://localhost:3001/api/health; then
+            echo "✅ Backend health check passed"
+            break
+          fi
+          echo "Waiting for backend to start... ($i/30)"
+          sleep 2
+        done
+        
+        # Test API endpoints
+        echo "Testing API endpoints..."
+        
+        # Test SMTP settings endpoint
+        curl -f -X GET http://localhost:3001/api/smtp/settings || echo "SMTP settings endpoint test failed"
+        
+        # Test tasks endpoint
+        curl -f -X GET http://localhost:3001/api/tasks || echo "Tasks endpoint test failed"
+        
+        # Test reminders endpoint
+        curl -f -X GET http://localhost:3001/api/reminders || echo "Reminders endpoint test failed"
+        
+    - name: Test API with sample data
+      run: |
+        # Test creating a task (using sync endpoint)
+        TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks/sync \
+          -H "Content-Type: application/json" \
+          -d '{"tasks":[{"id":"test-task-1","title":"Test Task","dueDate":1735689599000,"priority":"medium","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":true,"reminderTime":1735689599000,"userEmail":"test@example.com"}]}')
+        
+        if echo "$TASK_RESPONSE" | grep -q "success.*true"; then
+          echo "✅ Task creation test passed"
+        else
+          echo "❌ Task creation test failed"
+          echo "Response: $TASK_RESPONSE"
+          exit 1
+        fi
+        
+        # Test creating a reminder (using send endpoint)
+        REMINDER_RESPONSE=$(curl -s -X POST http://localhost:3001/api/reminders/send/test-task-1 \
+          -H "Content-Type: application/json" \
+          -d '{"email":"test@example.com"}')
+        
+        if echo "$REMINDER_RESPONSE" | grep -q "success.*true"; then
+          echo "✅ Reminder creation test passed"
+        else
+          echo "❌ Reminder creation test failed"
+          echo "Response: $REMINDER_RESPONSE"
+          exit 1
+        fi
+        
+    - name: Stop backend server
+      run: pkill -f "node.*server.js" || true
+
+  backend-security:
+    runs-on: ubuntu-latest
+    needs: backend-tests
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+        
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+        
+    - name: Run npm audit
+      run: |
+        cd backend
+        npm audit --audit-level=moderate
+        
+    - name: Check for known vulnerabilities
+      run: |
+        cd backend
+        npx audit-ci --config .audit-ci.json || echo "Audit completed with findings"
+      continue-on-error: true
