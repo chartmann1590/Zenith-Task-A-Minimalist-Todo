@@ -30,14 +30,20 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000', 
       'http://localhost:5173',
-      // Allow any origin for network access (in production, you'd want to restrict this)
-      '*'
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173'
     ];
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    // Allow any network origin for development (you can restrict this in production)
+    if (origin && (
+      allowedOrigins.includes(origin) || 
+      origin.startsWith('http://10.') || 
+      origin.startsWith('http://192.168.') ||
+      origin.startsWith('http://172.')
+    )) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -169,10 +175,62 @@ async function sendEmail(to, subject, html, text) {
   }
 }
 
+// Helper for repeated replacements to fully sanitize multi-character patterns
+function repeatReplace(str, regex, replacement) {
+  let prev;
+  do {
+    prev = str;
+    str = str.replace(regex, replacement);
+  } while (str !== prev);
+  return str;
+}
+
+// Sanitize HTML content to prevent XSS
+function sanitizeHtml(html) {
+  // Basic HTML sanitization - remove script tags and dangerous attributes
+  const patterns = [
+    [/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ''],
+    [/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, ''],
+    [/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, ''],
+    [/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, ''],
+    [/<link\b[^<]*(?:(?!<\/link>)<[^<]*)*<\/link>/gi, ''],
+    [/<meta\b[^<]*(?:(?!<\/meta>)<[^<]*)*<\/meta>/gi, ''],
+    [/on\w+="[^"]*"/gi, ''],
+    [/on\w+='[^']*'/gi, ''],
+    [/javascript:/gi, ''],
+    [/vbscript:/gi, ''],
+    [/data:/gi, ''],
+  ];
+  let sanitized = html;
+  for (const [re, rep] of patterns) {
+    sanitized = repeatReplace(sanitized, re, rep);
+  }
+  return sanitized;
+}
+
+// Escape HTML entities to prevent XSS
+function escapeHtml(text) {
+  if (typeof text !== 'string') return text;
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
 // Generate email template
 function generateReminderEmail(task) {
   const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date';
   const priority = task.priority ? task.priority.charAt(0).toUpperCase() + task.priority.slice(1) : 'Normal';
+  
+  // Sanitize user input
+  const safeTitle = escapeHtml(task.title);
+  const safeDueDate = escapeHtml(dueDate);
+  const safePriority = escapeHtml(priority);
+  const safeReminderTime = escapeHtml(new Date(task.reminderTime).toLocaleString());
+  const safePriorityClass = escapeHtml(task.priority || 'normal');
   
   const html = `
     <!DOCTYPE html>
@@ -204,17 +262,17 @@ function generateReminderEmail(task) {
       </div>
       <div class="content">
         <div class="task-card">
-          <div class="task-title">${task.title}</div>
+          <div class="task-title">${safeTitle}</div>
           <div class="task-details">
             <div class="detail-item">
-              <span class="label">Due Date:</span> ${dueDate}
+              <span class="label">Due Date:</span> ${safeDueDate}
             </div>
             <div class="detail-item">
               <span class="label">Priority:</span> 
-              <span class="priority-${task.priority || 'normal'}">${priority}</span>
+              <span class="priority-${safePriorityClass}">${safePriority}</span>
             </div>
             <div class="detail-item">
-              <span class="label">Reminder Time:</span> ${new Date(task.reminderTime).toLocaleString()}
+              <span class="label">Reminder Time:</span> ${safeReminderTime}
             </div>
           </div>
         </div>
@@ -229,18 +287,21 @@ function generateReminderEmail(task) {
   `;
 
   const text = `
-Task Reminder: ${task.title}
+Task Reminder: ${safeTitle}
 
-Due Date: ${dueDate}
-Priority: ${priority}
-Reminder Time: ${new Date(task.reminderTime).toLocaleString()}
+Due Date: ${safeDueDate}
+Priority: ${safePriority}
+Reminder Time: ${safeReminderTime}
 
 This is a friendly reminder about your task. Make sure to complete it on time!
 
 This email was sent from your Todo Reminder App.
   `;
 
-  return { html, text };
+  // Sanitize the final HTML
+  const sanitizedHtml = sanitizeHtml(html);
+
+  return { html: sanitizedHtml, text };
 }
 
 // API Routes
@@ -555,7 +616,7 @@ app.post('/api/reminders/send/:taskId', async (req, res) => {
     }
 
     const { html, text } = generateReminderEmail(task);
-    await sendEmail(recipientEmail, `Reminder: ${task.title}`, html, text);
+    await sendEmail(recipientEmail, `Reminder: ${safeTitle}`, html, text);
     
     res.json({
       success: true,
@@ -566,6 +627,36 @@ app.post('/api/reminders/send/:taskId', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+});
+
+// Client error reporting endpoint
+app.post('/api/client-errors', async (req, res) => {
+  try {
+    const errorData = req.body;
+    
+    // Log the error for debugging
+    console.log('Client error received:', {
+      message: errorData.message,
+      level: errorData.level,
+      category: errorData.category,
+      url: errorData.url,
+      timestamp: errorData.timestamp
+    });
+    
+    // In a production app, you might want to store these in a database
+    // or send them to an external error tracking service
+    
+    res.json({
+      success: true,
+      message: 'Error reported successfully'
+    });
+  } catch (error) {
+    console.error('Error processing client error report:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process error report'
     });
   }
 });
@@ -600,27 +691,30 @@ cron.schedule('* * * * *', async () => {
         
         if (task && !task.completed && task.reminderEnabled) {
           try {
+            // Sanitize task title for safe logging
+            const safeTitle = escapeHtml(task.title);
+            
             // Always use the configured default toEmail for reminders
             const recipientEmail = smtpSettings.toEmail;
             
             if (!recipientEmail) {
-              console.error(`No recipient email configured for task: ${task.title}`);
+              console.error(`No recipient email configured for task: ${safeTitle}`);
               continue;
             }
 
             // In test environment, skip actual email sending
             if (process.env.NODE_ENV === 'test') {
               await db.markReminderSent(reminder.taskId);
-              console.log(`Reminder would be sent for task: ${task.title} to ${recipientEmail} (test mode)`);
+              console.log(`Reminder would be sent for task: ${safeTitle} to ${recipientEmail} (test mode)`);
             } else {
               const { html, text } = generateReminderEmail(task);
-              await sendEmail(recipientEmail, `Reminder: ${task.title}`, html, text);
+              await sendEmail(recipientEmail, `Reminder: ${safeTitle}`, html, text);
               
               await db.markReminderSent(reminder.taskId);
-              console.log(`Reminder sent for task: ${task.title} to ${recipientEmail}`);
+              console.log(`Reminder sent for task: ${safeTitle} to ${recipientEmail}`);
             }
           } catch (error) {
-            console.error(`Failed to send reminder for task ${task.title}:`, error);
+            console.error(`Failed to send reminder for task ${safeTitle}:`, error);
           }
         }
       }

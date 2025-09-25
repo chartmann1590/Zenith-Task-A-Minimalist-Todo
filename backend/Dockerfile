@@ -1,6 +1,9 @@
 # Backend Dockerfile for Node.js/Express Todo App
 FROM node:18-alpine
 
+# Install wget for health checks
+RUN apk add --no-cache wget
+
 # Create app directory
 WORKDIR /app
 
@@ -10,6 +13,9 @@ RUN npm ci --only=production
 
 # Copy source code
 COPY . .
+
+# Make health check script executable
+RUN chmod +x health-check.js
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
@@ -26,8 +32,8 @@ USER nodejs
 EXPOSE 3001
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
+  CMD node health-check.js
 
 # Start the application
 CMD ["npm", "start"]

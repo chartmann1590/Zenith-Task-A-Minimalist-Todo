@@ -44,7 +44,10 @@ type AppActions = {
   closeDeleteDialog: () => void;
 };
 
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:3001/api`;
+// Use relative URLs in production (Docker) and absolute URLs in development
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '/api' 
+  : `${window.location.protocol}//${window.location.hostname}:3001/api`;
 
 const initialState: AppState = {
   projects: [
