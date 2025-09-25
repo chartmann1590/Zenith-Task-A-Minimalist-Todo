@@ -14,6 +14,9 @@ RUN npm ci --only=production
 # Copy source code
 COPY . .
 
+# Make health check script executable
+RUN chmod +x health-check.js
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
