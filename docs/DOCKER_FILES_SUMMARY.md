@@ -6,8 +6,14 @@ This document provides an overview of all the Docker-related files created for t
 
 ### Main Setup Files
 - **`docker-setup.sh`** - Main automated setup script with Docker installation detection
-- **`test-docker-setup.sh`** - Test script to verify Docker setup is working
+- **`docker-setup.bat`** - Windows batch script for Docker deployment
 - **`docker-compose.yml`** - Multi-container orchestration configuration
+
+### Test Files
+- **`test/test-docker-setup.sh`** - Test script to verify Docker setup is working
+- **`test/test-local.sh`** - Local development testing script
+- **`test/test-nginx-config.sh`** - Nginx configuration testing
+- **`test/test-email.js`** - SMTP testing utility
 
 ### Docker Configuration Files
 - **`Dockerfile.frontend`** - Frontend container configuration (React/Vite)
@@ -32,7 +38,7 @@ This document provides an overview of all the Docker-related files created for t
 ./docker-setup.sh
 
 # Test existing setup
-./test-docker-setup.sh
+./test/test-docker-setup.sh
 
 # Manual Docker commands
 docker compose up -d

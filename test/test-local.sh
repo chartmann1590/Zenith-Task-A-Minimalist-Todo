@@ -46,37 +46,37 @@ echo "🎨 Testing Frontend..."
 echo "====================="
 
 # Install frontend dependencies
-if [ ! -d "node_modules" ]; then
+if [ ! -d "../node_modules" ]; then
     echo "Installing frontend dependencies..."
-    npm install
+    cd .. && npm install && cd test
 fi
 
 # Run ESLint
 echo "Running ESLint..."
-if npm run lint; then
+cd .. && if npm run lint; then
     print_status "ESLint passed"
 else
     print_error "ESLint failed"
     exit 1
-fi
+fi && cd test
 
 # Type check
 echo "Running TypeScript type check..."
-if npx tsc --noEmit; then
+cd .. && if npx tsc --noEmit; then
     print_status "TypeScript type check passed"
 else
     print_error "TypeScript type check failed"
     exit 1
-fi
+fi && cd test
 
 # Build frontend
 echo "Building frontend..."
-if npm run build; then
+cd .. && if npm run build; then
     print_status "Frontend build successful"
 else
     print_error "Frontend build failed"
     exit 1
-fi
+fi && cd test
 
 # Backend Tests
 echo ""
@@ -84,21 +84,21 @@ echo "🔧 Testing Backend..."
 echo "===================="
 
 # Install backend dependencies
-if [ ! -d "backend/node_modules" ]; then
+if [ ! -d "../backend/node_modules" ]; then
     echo "Installing backend dependencies..."
-    cd backend && npm install && cd ..
+    cd ../backend && npm install && cd ../test
 fi
 
 # Run backend tests
 echo "Running backend tests..."
-cd backend
+cd ../backend
 if npm test; then
     print_status "Backend tests passed"
 else
     print_error "Backend tests failed"
     exit 1
 fi
-cd ..
+cd ../test
 
 # Docker Tests
 echo ""
@@ -111,21 +111,21 @@ if ! command -v docker &> /dev/null; then
 else
     # Build frontend Docker image
     echo "Building frontend Docker image..."
-    if docker build -f Dockerfile.frontend -t todo-frontend:test .; then
+    cd .. && if docker build -f Dockerfile.frontend -t todo-frontend:test .; then
         print_status "Frontend Docker image built successfully"
     else
         print_error "Frontend Docker image build failed"
         exit 1
-    fi
+    fi && cd test
     
     # Build backend Docker image
     echo "Building backend Docker image..."
-    if docker build -f backend/Dockerfile -t todo-backend:test ./backend; then
+    cd .. && if docker build -f backend/Dockerfile -t todo-backend:test ./backend; then
         print_status "Backend Docker image built successfully"
     else
         print_error "Backend Docker image build failed"
         exit 1
-    fi
+    fi && cd test
     
     # Test frontend container
     echo "Testing frontend container..."
@@ -172,21 +172,21 @@ echo "============================"
 
 # Frontend security audit
 echo "Running frontend security audit..."
-if npm audit --audit-level=moderate; then
+cd .. && if npm audit --audit-level=moderate; then
     print_status "Frontend security audit passed"
 else
     print_warning "Frontend security audit found issues"
-fi
+fi && cd test
 
 # Backend security audit
 echo "Running backend security audit..."
-cd backend
+cd ../backend
 if npm audit --audit-level=moderate; then
     print_status "Backend security audit passed"
 else
     print_warning "Backend security audit found issues"
 fi
-cd ..
+cd ../test
 
 # Integration Tests
 echo ""
@@ -195,10 +195,10 @@ echo "==============================="
 
 # Start backend server
 echo "Starting backend server..."
-cd backend
+cd ../backend
 NODE_ENV=test npm start &
 BACKEND_PID=$!
-cd ..
+cd ../test
 
 # Wait for backend to start
 sleep 10
