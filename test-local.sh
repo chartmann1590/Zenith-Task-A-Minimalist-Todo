@@ -196,7 +196,7 @@ echo "==============================="
 # Start backend server
 echo "Starting backend server..."
 cd backend
-npm start &
+NODE_ENV=test npm start &
 BACKEND_PID=$!
 cd ..
 
