@@ -30,6 +30,11 @@ jobs:
     - name: Install backend dependencies
       run: cd backend && npm install
       
+    - name: Free port 3001 for testing
+      run: |
+        sudo fuser -k 3001/tcp || true
+        pkill -f "node.*server.js" || true
+      
     - name: Run frontend linting
       run: npm run lint
       
@@ -42,23 +47,38 @@ jobs:
     - name: Start backend server for testing
       run: |
         cd backend
-        npm start &
+        echo "Starting backend server..."
+        npm start > server.log 2>&1 &
         echo $! > backend.pid
-        sleep 15
+        echo "Backend server started with PID: $(cat backend.pid)"
+        sleep 5
+        echo "Server log (first 20 lines):"
+        head -20 server.log || echo "No log output yet"
       env:
         NODE_ENV: test
         PORT: 3001
         
     - name: Wait for backend to be ready
       run: |
+        echo "Waiting for backend server to be ready..."
         for i in {1..30}; do
           if curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
-            echo "Backend is ready!"
+            echo "✅ Backend is ready!"
             break
           fi
-          echo "Waiting for backend... ($i/30)"
+          echo "⏳ Waiting for backend... ($i/30)"
           sleep 2
         done
+        
+        # Final check
+        if ! curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
+          echo "❌ Backend failed to start after 60 seconds"
+          echo "Checking if process is still running..."
+          ps aux | grep "node.*server.js" || echo "No backend process found"
+          echo "Server log:"
+          cat backend/server.log || echo "No server log found"
+          exit 1
+        fi
         
     - name: Run backend tests
       run: cd backend && npm test
@@ -112,6 +132,11 @@ jobs:
         sleep 10
         curl -f http://localhost:3000
         docker stop frontend-test && docker rm frontend-test
+        
+    - name: Free port 3001 for Docker test
+      run: |
+        docker rm -f backend-test || true
+        sudo fuser -k 3001/tcp || true
         
     - name: Test backend container
       run: |

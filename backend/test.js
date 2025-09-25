@@ -47,6 +47,7 @@ async function runTests() {
   
   // Test 1: Health Check
   log('\n1. Testing Health Check...');
+  log(`Testing endpoint: ${BASE_URL}/health`, 'yellow');
   const healthResult = await testEndpoint('/health');
   if (healthResult.success) {
     log('✅ Health check passed', 'green');
@@ -54,6 +55,8 @@ async function runTests() {
     log('❌ Health check failed', 'red');
     log(`Error: ${healthResult.error || healthResult.data?.error}`, 'red');
     log('Make sure the backend server is running on port 3001', 'yellow');
+    log('Full response:', 'yellow');
+    console.log(JSON.stringify(healthResult, null, 2));
     return false;
   }
   
