@@ -179,7 +179,7 @@ jobs:
         # Test creating a task (using sync endpoint)
         TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks/sync \
           -H "Content-Type: application/json" \
-          -d '{"tasks":[{"id":"e2e-test-task","title":"E2E Test Task","dueDate":1735689599000,"priority":"medium","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":false,"reminderTime":null,"userEmail":"test@example.com"}]}')
+          -d '{"tasks":[{"id":"e2e-test-task","title":"E2E Test Task","dueDate":1735689599000,"priority":"medium","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":true,"reminderTime":1735689599000,"userEmail":"test@example.com"}]}')
         
         echo "Task creation response: $TASK_RESPONSE"
         

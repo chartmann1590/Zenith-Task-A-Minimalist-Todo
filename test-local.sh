@@ -230,7 +230,7 @@ fi
 echo "Testing task creation..."
 TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks/sync \
     -H "Content-Type: application/json" \
-    -d '{"tasks":[{"id":"local-test-task","title":"Local Test Task","dueDate":1735689599000,"priority":"medium","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":false,"reminderTime":null,"userEmail":"test@example.com"}]}')
+    -d '{"tasks":[{"id":"local-test-task","title":"Local Test Task","dueDate":1735689599000,"priority":"medium","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":true,"reminderTime":1735689599000,"userEmail":"test@example.com"}]}')
 
 if echo "$TASK_RESPONSE" | grep -q "success.*true"; then
     print_status "Task creation test passed"

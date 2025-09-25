@@ -120,6 +120,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Install Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install docker-compose -y
+      
     - name: Create test environment file
       run: |
         cat > .env.test << EOF
@@ -179,7 +184,7 @@ jobs:
         # Test creating a task via API (using sync endpoint)
         TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks/sync \
           -H "Content-Type: application/json" \
-          -d '{"tasks":[{"id":"integration-test-task","title":"Integration Test Task","dueDate":1735689599000,"priority":"high","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":false,"reminderTime":null,"userEmail":"test@example.com"}]}')
+          -d '{"tasks":[{"id":"integration-test-task","title":"Integration Test Task","dueDate":1735689599000,"priority":"high","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":true,"reminderTime":1735689599000,"userEmail":"test@example.com"}]}')
         
         if echo "$TASK_RESPONSE" | grep -q "success.*true"; then
           echo "✅ Task creation via API works"
