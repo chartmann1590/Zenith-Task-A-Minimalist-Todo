@@ -28,5 +28,6 @@ dist-ssr
 .dev.vars*
 .env.*
 backend/.env
+backend/test-email.js
 
 data/
