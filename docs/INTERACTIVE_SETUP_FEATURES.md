@@ -145,3 +145,10 @@ The interactive setup has been tested with:
 6. **Guided**: Step-by-step process with helpful instructions
 
 The interactive setup makes the Docker configuration process much more accessible and user-friendly!
+
+## Related Documentation
+
+- [Main README](../README.md) - Project overview and quick start
+- [Docker Setup Guide](./DOCKER_SETUP.md) - Complete Docker setup instructions
+- [Docker Files Summary](./DOCKER_FILES_SUMMARY.md) - Overview of all Docker files
+- [Email Setup Guide](./EMAIL_SETUP_GUIDE.md) - SMTP configuration details

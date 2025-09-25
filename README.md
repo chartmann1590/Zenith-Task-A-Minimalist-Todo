@@ -55,7 +55,7 @@ This script will:
 - Backend API: http://localhost:3001
 - Health Check: http://localhost:3001/api/health
 
-For detailed Docker setup instructions, see [DOCKER_SETUP.md](./DOCKER_SETUP.md).
+For detailed Docker setup instructions, see [DOCKER_SETUP.md](./docs/DOCKER_SETUP.md). For complete documentation, see [Documentation Index](./docs/README.md).
 
 ### Docker Commands
 
@@ -159,6 +159,26 @@ This project is designed for easy deployment to any static hosting platform.
 
 2.  **Deploy to your preferred platform:**
     You can deploy the built files from the `dist` directory to any static hosting platform like Vercel, Netlify, GitHub Pages, or any other hosting service.
+
+## 📚 Documentation
+
+All documentation is organized in the `docs/` folder. See [Documentation Index](./docs/README.md) for a complete overview.
+
+### Quick Links
+
+### Setup & Configuration
+- **[Docker Setup Guide](./docs/DOCKER_SETUP.md)** - Complete Docker setup instructions with interactive configuration
+- **[Interactive Setup Features](./docs/INTERACTIVE_SETUP_FEATURES.md)** - Detailed guide to the interactive setup process
+- **[Email Setup Guide](./docs/EMAIL_SETUP_GUIDE.md)** - SMTP configuration and email reminder setup
+
+### Technical Documentation
+- **[Docker Files Summary](./docs/DOCKER_FILES_SUMMARY.md)** - Overview of all Docker-related files and configurations
+- **[Backend Documentation](./docs/BACKEND_README.md)** - Backend API documentation and setup
+
+### Development
+- **[Prompts](./docs/prompts/)** - AI prompts and usage guidelines
+  - [Selection Prompts](./docs/prompts/selection.md)
+  - [Usage Prompts](./docs/prompts/usage.md)
 
 ## License
 

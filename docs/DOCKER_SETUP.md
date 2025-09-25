@@ -19,7 +19,7 @@ This script will:
 
 ### Interactive Environment Setup
 
-The setup script includes a comprehensive interactive environment configuration:
+The setup script includes a comprehensive interactive environment configuration. For detailed information about all interactive features, see [Interactive Setup Features](./INTERACTIVE_SETUP_FEATURES.md).
 
 1. **Environment File Detection**: Automatically detects if `.env` files exist
 2. **Configuration Options**: Choose to use existing, recreate, or edit manually
@@ -403,4 +403,4 @@ If you encounter issues:
 3. Verify Docker installation: `docker --version`
 4. Check system resources: `docker stats`
 
-For additional help, refer to the main README.md or create an issue in the project repository.
+For additional help, refer to the main [README.md](../README.md) or create an issue in the project repository.

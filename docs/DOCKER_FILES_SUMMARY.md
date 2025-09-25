@@ -21,8 +21,9 @@ This document provides an overview of all the Docker-related files created for t
 - **`backend/.env`** - Backend environment variables (created by setup script)
 
 ### Documentation
-- **`DOCKER_SETUP.md`** - Comprehensive Docker setup guide
+- **`docs/DOCKER_SETUP.md`** - Comprehensive Docker setup guide
 - **`README.md`** - Updated with Docker setup instructions
+- **`docs/INTERACTIVE_SETUP_FEATURES.md`** - Interactive setup features documentation
 
 ## Quick Start Commands
 
@@ -106,3 +107,8 @@ After successful setup:
 4. Test email functionality in the Settings page
 
 The Docker setup is now complete and ready for use!
+
+For more information, see:
+- [Main README](../README.md) - Project overview and quick start
+- [Docker Setup Guide](./DOCKER_SETUP.md) - Detailed setup instructions
+- [Interactive Setup Features](./INTERACTIVE_SETUP_FEATURES.md) - Interactive configuration guide
