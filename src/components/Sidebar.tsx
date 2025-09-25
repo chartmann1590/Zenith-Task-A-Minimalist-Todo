@@ -1,21 +1,44 @@
 import React from 'react';
-import { CheckSquare, Inbox, Briefcase, Plus, Settings } from 'lucide-react';
+import { CheckSquare, Inbox, Briefcase, Plus, Settings, Home, Heart, Star, Target, BookOpen, ShoppingCart, Car, Plane, Gamepad2, Music, Camera, Code, Palette, Zap, Shield, Trophy, Lightbulb } from 'lucide-react';
 import { useAppStore } from '@/store/appStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ProjectContextMenu } from './ProjectContextMenu';
 import { ScrollArea } from './ui/scroll-area';
 import { Link, useLocation } from 'react-router-dom';
+const iconMap: { [key: string]: React.ComponentType<{ className?: string }> } = {
+  inbox: Inbox,
+  briefcase: Briefcase,
+  home: Home,
+  heart: Heart,
+  star: Star,
+  target: Target,
+  book: BookOpen,
+  shopping: ShoppingCart,
+  car: Car,
+  plane: Plane,
+  game: Gamepad2,
+  music: Music,
+  camera: Camera,
+  code: Code,
+  palette: Palette,
+  zap: Zap,
+  shield: Shield,
+  trophy: Trophy,
+  lightbulb: Lightbulb,
+};
+
+function getProjectIcon(iconName?: string) {
+  const IconComponent = iconMap[iconName || 'inbox'] || Inbox;
+  return <IconComponent className="h-5 w-5" />;
+}
+
 export function Sidebar() {
   const projects = useAppStore((state) => state.projects);
   const activeProjectId = useAppStore((state) => state.activeProjectId);
   const setActiveProjectId = useAppStore((state) => state.setActiveProjectId);
   const openProjectDialog = useAppStore((state) => state.openProjectDialog);
   const location = useLocation();
-  const projectIcons: { [key: string]: React.ReactNode } = {
-    'Inbox': <Inbox className="h-5 w-5" />,
-    'Work': <Briefcase className="h-5 w-5" />,
-  };
   return (
     <aside className="w-full md:w-[280px] bg-neutral-50 dark:bg-neutral-900/50 p-6 flex flex-col border-r border-border h-full">
       <div className="flex items-center gap-3 mb-8">
@@ -43,7 +66,7 @@ export function Sidebar() {
                 )}
                 onClick={() => setActiveProjectId(project.id)}
               >
-                <div className="mr-3">{projectIcons[project.name] || <Inbox className="h-5 w-5" />}</div>
+                <div className="mr-3">{getProjectIcon(project.icon)}</div>
                 <span className="truncate flex-1 text-left">{project.name}</span>
               </Button>
             </ProjectContextMenu>

@@ -34,8 +34,8 @@ type AppActions = {
   reorderTasks: (oldIndex: number, newIndex: number, projectId: string) => void;
   syncTasksWithBackend: () => Promise<void>;
   // Project actions
-  addProject: (name: string) => void;
-  updateProject: (projectId: string, name: string) => void;
+  addProject: (name: string, icon?: string) => void;
+  updateProject: (projectId: string, name: string, icon?: string) => void;
   deleteProject: (projectId: string) => void;
   // Dialog actions
   openProjectDialog: (project: Project | null) => void;
@@ -48,8 +48,8 @@ const API_BASE_URL = 'http://localhost:3001/api';
 
 const initialState: AppState = {
   projects: [
-    { id: 'inbox-default-id', name: 'Inbox', createdAt: Date.now() },
-    { id: 'work-default-id', name: 'Work', createdAt: Date.now() }
+    { id: 'inbox-default-id', name: 'Inbox', createdAt: Date.now(), icon: 'inbox' },
+    { id: 'work-default-id', name: 'Work', createdAt: Date.now(), icon: 'briefcase' }
   ],
   tasks: [],
   activeProjectId: 'inbox-default-id',
@@ -315,11 +315,12 @@ export const useAppStore = create<AppState & AppActions>()(
       toast.success('Tasks reordered successfully!');
     },
 
-    addProject: async (name: string) => {
+    addProject: async (name: string, icon?: string) => {
       const newProject: Project = {
         id: crypto.randomUUID(),
         name,
         createdAt: Date.now(),
+        icon: icon || 'inbox',
       };
       
       try {
@@ -348,14 +349,17 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
-    updateProject: (projectId: string, name: string) => {
+    updateProject: (projectId: string, name: string, icon?: string) => {
       set(state => {
         const projectIndex = state.projects.findIndex(p => p.id === projectId);
         if (projectIndex !== -1) {
           state.projects[projectIndex].name = name;
+          if (icon !== undefined) {
+            state.projects[projectIndex].icon = icon;
+          }
         }
       });
-      toast.success(`Project renamed to "${name}".`);
+      toast.success(`Project updated successfully.`);
     },
 
     deleteProject: (projectId: string) => {
