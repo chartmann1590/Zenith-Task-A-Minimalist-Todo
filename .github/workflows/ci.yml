@@ -39,14 +39,26 @@ jobs:
     - name: Build frontend
       run: npm run build
       
-    - name: Start backend server
+    - name: Start backend server for testing
       run: |
         cd backend
         npm start &
-        sleep 10
+        echo $! > backend.pid
+        sleep 15
       env:
         NODE_ENV: test
         PORT: 3001
+        
+    - name: Wait for backend to be ready
+      run: |
+        for i in {1..30}; do
+          if curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
+            echo "Backend is ready!"
+            break
+          fi
+          echo "Waiting for backend... ($i/30)"
+          sleep 2
+        done
         
     - name: Run backend tests
       run: cd backend && npm test
@@ -56,7 +68,7 @@ jobs:
     - name: Run integration tests
       run: |
         chmod +x test/test-local.sh
-        ./test/test-local.sh
+        cd test && ./test-local.sh
       env:
         NODE_ENV: test
         
@@ -67,6 +79,15 @@ jobs:
     - name: Security audit (backend)
       run: cd backend && npm audit --audit-level=moderate
       continue-on-error: true
+      
+    - name: Cleanup backend server
+      if: always()
+      run: |
+        if [ -f backend.pid ]; then
+          kill $(cat backend.pid) 2>/dev/null || true
+          rm -f backend.pid
+        fi
+        pkill -f "node.*server.js" || true
 
   docker:
     runs-on: ubuntu-latest

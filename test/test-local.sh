@@ -57,6 +57,7 @@ cd .. && if npm run lint; then
     print_status "ESLint passed"
 else
     print_error "ESLint failed"
+    cd test
     exit 1
 fi && cd test
 
@@ -66,6 +67,7 @@ cd .. && if npx tsc --noEmit; then
     print_status "TypeScript type check passed"
 else
     print_error "TypeScript type check failed"
+    cd test
     exit 1
 fi && cd test
 
@@ -75,6 +77,7 @@ cd .. && if npm run build; then
     print_status "Frontend build successful"
 else
     print_error "Frontend build failed"
+    cd test
     exit 1
 fi && cd test
 
@@ -193,22 +196,13 @@ echo ""
 echo "🔗 Running Integration Tests..."
 echo "==============================="
 
-# Start backend server
-echo "Starting backend server..."
-cd ../backend
-NODE_ENV=test npm start &
-BACKEND_PID=$!
-cd ../test
-
-# Wait for backend to start
-sleep 10
-
-# Test backend health
+# Test backend health (server should already be running from workflow)
+echo "Testing backend health..."
 if curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
     print_status "Backend health check passed"
 else
     print_error "Backend health check failed"
-    kill $BACKEND_PID 2>/dev/null || true
+    print_warning "Make sure the backend server is running on port 3001"
     exit 1
 fi
 
@@ -265,8 +259,7 @@ else
     # Don't exit here as this is expected to fail in CI environments
 fi
 
-# Stop backend server
-kill $BACKEND_PID 2>/dev/null || true
+# Note: Backend server is managed by the workflow, not stopped here
 
 # Summary
 echo ""

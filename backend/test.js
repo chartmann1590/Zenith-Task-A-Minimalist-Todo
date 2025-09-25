@@ -53,6 +53,7 @@ async function runTests() {
   } else {
     log('❌ Health check failed', 'red');
     log(`Error: ${healthResult.error || healthResult.data?.error}`, 'red');
+    log('Make sure the backend server is running on port 3001', 'yellow');
     return false;
   }
   
