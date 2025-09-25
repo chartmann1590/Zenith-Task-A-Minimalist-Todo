@@ -30,14 +30,20 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000', 
       'http://localhost:5173',
-      // Allow any origin for network access (in production, you'd want to restrict this)
-      '*'
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173'
     ];
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    // Allow any network origin for development (you can restrict this in production)
+    if (origin && (
+      allowedOrigins.includes(origin) || 
+      origin.startsWith('http://10.') || 
+      origin.startsWith('http://192.168.') ||
+      origin.startsWith('http://172.')
+    )) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -566,6 +572,36 @@ app.post('/api/reminders/send/:taskId', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+});
+
+// Client error reporting endpoint
+app.post('/api/client-errors', async (req, res) => {
+  try {
+    const errorData = req.body;
+    
+    // Log the error for debugging
+    console.log('Client error received:', {
+      message: errorData.message,
+      level: errorData.level,
+      category: errorData.category,
+      url: errorData.url,
+      timestamp: errorData.timestamp
+    });
+    
+    // In a production app, you might want to store these in a database
+    // or send them to an external error tracking service
+    
+    res.json({
+      success: true,
+      message: 'Error reported successfully'
+    });
+  } catch (error) {
+    console.error('Error processing client error report:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process error report'
     });
   }
 });

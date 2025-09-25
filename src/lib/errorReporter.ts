@@ -283,7 +283,9 @@ class ErrorReporter {
   private errorQueue: ErrorReport[] = [];
   private isReporting = false;
   private readonly maxQueueSize = 10;
-  private readonly reportingEndpoint = `${window.location.protocol}//${window.location.hostname}:3001/api/client-errors`;
+  private readonly reportingEndpoint = process.env.NODE_ENV === 'production' 
+    ? '/api/client-errors' 
+    : `${window.location.protocol}//${window.location.hostname}:3001/api/client-errors`;
   private originalConsoleWarn: typeof console.warn | null = null;
   private originalConsoleError: typeof console.error | null = null;
   private isInitialized = false;
@@ -727,7 +729,11 @@ const shouldReportImmediate = (context: ErrorContext): boolean => {
 
 const sendImmediateError = async (payload: ImmediatePayload): Promise<void> => {
   try {
-    await fetch(`${window.location.protocol}//${window.location.hostname}:3001/api/client-errors`, {
+    const endpoint = process.env.NODE_ENV === 'production' 
+      ? '/api/client-errors' 
+      : `${window.location.protocol}//${window.location.hostname}:3001/api/client-errors`;
+    
+    await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
