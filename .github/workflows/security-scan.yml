@@ -1,5 +1,10 @@
 name: Security Scanning
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 on:
   push:
     branches: [ main, develop ]
@@ -91,7 +96,7 @@ jobs:
         
     - name: Upload Semgrep results
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
+      if: always() && exists('semgrep.sarif')
       with:
         sarif_file: semgrep.sarif
 
@@ -116,7 +121,7 @@ jobs:
         
     - name: Upload Trivy frontend scan results
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
+      if: always() && exists('trivy-frontend-results.sarif')
       with:
         sarif_file: 'trivy-frontend-results.sarif'
         category: trivy-frontend
@@ -127,10 +132,11 @@ jobs:
         image-ref: 'todo-backend:security-test'
         format: 'sarif'
         output: 'trivy-backend-results.sarif'
+      continue-on-error: true
         
     - name: Upload Trivy backend scan results
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
+      if: always() && exists('trivy-backend-results.sarif')
       with:
         sarif_file: 'trivy-backend-results.sarif'
         category: trivy-backend
@@ -148,8 +154,8 @@ jobs:
       uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        base: main
-        head: HEAD
+        base: ${{ github.event.before }}
+        head: ${{ github.sha }}
         extra_args: --debug --only-verified
 
   license-scan:

@@ -26,7 +26,7 @@ This directory contains GitHub Actions workflows for automated testing, security
 - Build validation
 - Multi-Node.js version testing (18, 20)
 - Build artifact upload
-- Preview deployment for PRs
+- Preview build artifacts for PRs
 
 ### 🔧 Backend CI (`backend-ci.yml`)
 **Triggers:** Changes to backend code
@@ -80,7 +80,6 @@ This directory contains GitHub Actions workflows for automated testing, security
 **Features:**
 - Staging environment deployment
 - Production environment deployment
-- Docker Hub image publishing
 - Post-deployment health checks
 - Environment-specific configurations
 
@@ -102,14 +101,12 @@ graph TD
     
     G --> H[Deploy Staging]
     H --> I[Deploy Production]
-    H --> J[Docker Hub Push]
 ```
 
 ## Environment Variables
 
 ### Required Secrets
-- `DOCKER_USERNAME`: Docker Hub username for image publishing
-- `DOCKER_PASSWORD`: Docker Hub password/token
+None - All workflows run without external authentication requirements
 
 ### Optional Environment Variables
 - `SMTP_HOST`: SMTP server for email testing

@@ -96,10 +96,9 @@ jobs:
     - name: Build for preview
       run: npm run build
       
-    - name: Deploy to GitHub Pages (Preview)
-      uses: peaceiris/actions-gh-pages@v3
-      if: github.ref == 'refs/heads/develop'
+    - name: Upload preview build
+      uses: actions/upload-artifact@v4
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist
-        destination_dir: preview/${{ github.event.number }}
+        name: frontend-preview-${{ github.event.number }}
+        path: dist/
+        retention-days: 7
