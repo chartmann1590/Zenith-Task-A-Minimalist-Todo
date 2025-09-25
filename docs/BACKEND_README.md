@@ -71,13 +71,16 @@ npm start
 
 The server will start on `http://localhost:3001`
 
-### 5. Test SMTP Configuration
+### 5. Test SMTP Configuration (Optional)
+
+For local development, you can test your SMTP configuration:
 
 ```bash
-npm test
+cd ../test
+node test-email.js
 ```
 
-This will send a test email to verify your SMTP settings.
+**Note**: Email testing is not included in the CI pipeline since it requires real SMTP credentials.
 
 ## API Endpoints
 
@@ -132,12 +135,12 @@ The system runs a cron job every minute to check for due reminders:
 ```
 backend/
 ├── server.js          # Main server file
-├── package.json       # Dependencies
+├── package.json       # Dependencies and scripts
 ├── .env.example       # Environment template
 └── README.md          # This file
 
 test/
-├── test-email.js      # SMTP testing utility
+├── test-email.js      # SMTP testing utility (local development only)
 ├── test-docker-setup.sh # Docker setup testing
 ├── test-local.sh      # Local development testing
 └── test-nginx-config.sh # Nginx configuration testing
