@@ -88,7 +88,7 @@ ${colorConfig
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color
     // Sanitize color values to prevent XSS
-    const safeColor = color ? color.replace(/[<>\"'&]/g, '') : null
+    const safeColor = color ? color.replace(/[<>"'&]/g, '') : null
     return safeColor ? `  --color-${key}: ${safeColor};` : null
   })
   .join("\n")}

@@ -47,7 +47,25 @@ fi
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to be ready..."
-sleep 30
+echo "Checking backend health..."
+for i in {1..30}; do
+  if curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
+    echo "✅ Backend is ready"
+    break
+  fi
+  echo "Backend not ready yet, waiting... ($i/30)"
+  sleep 2
+done
+
+echo "Checking frontend..."
+for i in {1..15}; do
+  if curl -f http://localhost:3000 > /dev/null 2>&1; then
+    echo "✅ Frontend is ready"
+    break
+  fi
+  echo "Frontend not ready yet, waiting... ($i/15)"
+  sleep 2
+done
 
 # Test backend health
 echo "🔍 Testing backend health..."
@@ -75,8 +93,21 @@ if curl -f http://localhost:3000/api/health > /dev/null 2>&1; then
     echo "✅ API proxy is working"
 else
     echo "❌ API proxy is not working"
+    echo "Debugging information:"
+    echo "Container status:"
+    docker-compose ps 2>/dev/null || docker compose ps 2>/dev/null
+    echo ""
+    echo "Backend logs:"
+    docker-compose logs backend 2>/dev/null || docker compose logs backend 2>/dev/null
+    echo ""
     echo "Frontend logs:"
     docker-compose logs frontend 2>/dev/null || docker compose logs frontend 2>/dev/null
+    echo ""
+    echo "Network information:"
+    docker network ls 2>/dev/null
+    echo ""
+    echo "Backend container network:"
+    docker inspect todo-backend --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || echo "Backend container not found"
 fi
 
 # Test client-errors endpoint
