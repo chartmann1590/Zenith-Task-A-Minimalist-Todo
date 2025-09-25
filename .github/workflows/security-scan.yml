@@ -94,9 +94,18 @@ jobs:
           p/owasp-top-ten
         generateSarif: "1"
         
+    - name: Check if Semgrep SARIF exists
+      id: check-semgrep
+      run: |
+        if [ -f "semgrep.sarif" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+        
     - name: Upload Semgrep results
       uses: github/codeql-action/upload-sarif@v3
-      if: always() && exists('semgrep.sarif')
+      if: always() && steps.check-semgrep.outputs.exists == 'true'
       with:
         sarif_file: semgrep.sarif
 
@@ -119,9 +128,18 @@ jobs:
         format: 'sarif'
         output: 'trivy-frontend-results.sarif'
         
+    - name: Check if Trivy frontend SARIF exists
+      id: check-trivy-frontend
+      run: |
+        if [ -f "trivy-frontend-results.sarif" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+        
     - name: Upload Trivy frontend scan results
       uses: github/codeql-action/upload-sarif@v3
-      if: always() && exists('trivy-frontend-results.sarif')
+      if: always() && steps.check-trivy-frontend.outputs.exists == 'true'
       with:
         sarif_file: 'trivy-frontend-results.sarif'
         category: trivy-frontend
@@ -134,9 +152,18 @@ jobs:
         output: 'trivy-backend-results.sarif'
       continue-on-error: true
         
+    - name: Check if Trivy backend SARIF exists
+      id: check-trivy-backend
+      run: |
+        if [ -f "trivy-backend-results.sarif" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+        
     - name: Upload Trivy backend scan results
       uses: github/codeql-action/upload-sarif@v3
-      if: always() && exists('trivy-backend-results.sarif')
+      if: always() && steps.check-trivy-backend.outputs.exists == 'true'
       with:
         sarif_file: 'trivy-backend-results.sarif'
         category: trivy-backend
