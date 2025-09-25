@@ -429,7 +429,7 @@ app.get('/api/projects', async (req, res) => {
 // Add project
 app.post('/api/projects', async (req, res) => {
   try {
-    const { id, name, createdAt } = req.body;
+    const { id, name, createdAt, icon } = req.body;
     
     if (!id || !name || !createdAt) {
       return res.status(400).json({
@@ -438,7 +438,7 @@ app.post('/api/projects', async (req, res) => {
       });
     }
 
-    await db.addProject({ id, name, createdAt });
+    await db.addProject({ id, name, createdAt, icon });
     
     res.json({
       success: true,
@@ -449,6 +449,34 @@ app.post('/api/projects', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to add project'
+    });
+  }
+});
+
+// Update project
+app.put('/api/projects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, icon } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: name'
+      });
+    }
+
+    await db.updateProject(id, name, icon);
+    
+    res.json({
+      success: true,
+      data: { id }
+    });
+  } catch (error) {
+    console.error('Error updating project:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update project'
     });
   }
 });
