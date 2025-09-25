@@ -195,19 +195,237 @@ check_docker_compose() {
     fi
 }
 
+# Function to validate email address
+validate_email() {
+    local email=$1
+    if [[ $email =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to validate port number
+validate_port() {
+    local port=$1
+    if [[ $port =~ ^[0-9]+$ ]] && [ $port -ge 1 ] && [ $port -le 65535 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to get user input with default value
+get_input() {
+    local prompt=$1
+    local default=$2
+    local var_name=$3
+    
+    if [ -n "$default" ]; then
+        read -p "$prompt [$default]: " input
+        eval "$var_name=\${input:-$default}"
+    else
+        read -p "$prompt: " input
+        eval "$var_name=\"$input\""
+    fi
+}
+
+# Function to get SMTP configuration interactively
+get_smtp_config() {
+    print_header "SMTP Configuration"
+    echo -e "${CYAN}Configure your SMTP settings for email reminders${NC}"
+    echo ""
+    
+    # SMTP Host
+    get_input "SMTP Host (e.g., smtp.gmail.com)" "smtp.gmail.com" "SMTP_HOST"
+    
+    # SMTP Port
+    while true; do
+        get_input "SMTP Port" "587" "SMTP_PORT"
+        if validate_port "$SMTP_PORT"; then
+            break
+        else
+            print_error "Invalid port number. Please enter a number between 1 and 65535."
+        fi
+    done
+    
+    # SMTP User (Email)
+    while true; do
+        get_input "SMTP Username (your email address)" "" "SMTP_USER"
+        if validate_email "$SMTP_USER"; then
+            break
+        else
+            print_error "Invalid email address. Please enter a valid email."
+        fi
+    done
+    
+    # SMTP Password
+    echo -e "${YELLOW}Note: For Gmail, use an App Password, not your regular password${NC}"
+    echo -e "${YELLOW}To create an App Password:${NC}"
+    echo -e "${YELLOW}1. Enable 2-Factor Authentication on your Google account${NC}"
+    echo -e "${YELLOW}2. Go to Google Account → Security → 2-Step Verification → App passwords${NC}"
+    echo -e "${YELLOW}3. Generate a new app password for 'Mail'${NC}"
+    echo ""
+    read -s -p "SMTP Password (App Password for Gmail): " SMTP_PASS
+    echo ""
+    
+    # From Name
+    get_input "From Name (sender display name)" "Todo Reminder" "FROM_NAME"
+    
+    # From Email
+    while true; do
+        get_input "From Email (sender email address)" "$SMTP_USER" "FROM_EMAIL"
+        if validate_email "$FROM_EMAIL"; then
+            break
+        else
+            print_error "Invalid email address. Please enter a valid email."
+        fi
+    done
+    
+    # Rate Limiting (optional)
+    echo ""
+    print_status "Rate Limiting Configuration (optional)"
+    get_input "Rate Limit Window (milliseconds)" "900000" "RATE_LIMIT_WINDOW_MS"
+    get_input "Max Requests per Window" "100" "RATE_LIMIT_MAX_REQUESTS"
+}
+
+# Function to display configuration summary
+show_config_summary() {
+    print_header "Configuration Summary"
+    echo -e "${CYAN}SMTP Host:${NC} $SMTP_HOST"
+    echo -e "${CYAN}SMTP Port:${NC} $SMTP_PORT"
+    echo -e "${CYAN}SMTP User:${NC} $SMTP_USER"
+    echo -e "${CYAN}SMTP Password:${NC} ${SMTP_PASS:0:4}****"
+    echo -e "${CYAN}From Name:${NC} $FROM_NAME"
+    echo -e "${CYAN}From Email:${NC} $FROM_EMAIL"
+    echo -e "${CYAN}Rate Limit Window:${NC} $RATE_LIMIT_WINDOW_MS ms"
+    echo -e "${CYAN}Max Requests:${NC} $RATE_LIMIT_MAX_REQUESTS"
+    echo ""
+}
+
 # Function to create environment file
 setup_environment() {
     print_header "Setting up Environment Configuration"
     
-    if [ ! -f .env ]; then
-        print_status "Creating .env file from template..."
-        cp .env.example .env
-        print_success "Environment file created!"
-        print_warning "Please edit .env file with your SMTP settings for email reminders"
-        print_status "You can configure email settings later in the app's Settings page"
-    else
-        print_success "Environment file already exists!"
+    if [ -f .env ]; then
+        print_warning "Environment file (.env) already exists!"
+        echo ""
+        echo "Current configuration:"
+        echo "======================"
+        if [ -f .env ]; then
+            grep -E "^[A-Z_]+" .env | sed 's/=.*/=***/' | head -10
+        fi
+        echo ""
+        
+        while true; do
+            read -p "Do you want to (u)se existing config, (r)ecreate it, or (e)dit manually? [u/r/e]: " choice
+            case $choice in
+                [Uu]* )
+                    print_success "Using existing environment configuration!"
+                    return 0
+                    ;;
+                [Rr]* )
+                    print_status "Recreating environment configuration..."
+                    break
+                    ;;
+                [Ee]* )
+                    print_status "Opening .env file for manual editing..."
+                    if command_exists nano; then
+                        nano .env
+                    elif command_exists vim; then
+                        vim .env
+                    elif command_exists vi; then
+                        vi .env
+                    else
+                        print_warning "No text editor found. Please edit .env manually."
+                        print_status "Environment file location: $(pwd)/.env"
+                    fi
+                    print_success "Environment configuration updated!"
+                    return 0
+                    ;;
+                * )
+                    print_error "Please enter 'u' for use existing, 'r' for recreate, or 'e' for edit manually."
+                    ;;
+            esac
+        done
     fi
+    
+    # Get SMTP configuration interactively
+    get_smtp_config
+    
+    # Show configuration summary
+    show_config_summary
+    
+    # Confirm configuration
+    while true; do
+        read -p "Is this configuration correct? [y/n]: " confirm
+        case $confirm in
+            [Yy]* )
+                break
+                ;;
+            [Nn]* )
+                print_status "Let's reconfigure..."
+                get_smtp_config
+                show_config_summary
+                ;;
+            * )
+                print_error "Please enter 'y' for yes or 'n' for no."
+                ;;
+        esac
+    done
+    
+    # Create .env file
+    print_status "Creating .env file..."
+    cat > .env << EOF
+# Todo App Environment Configuration
+# Generated by docker-setup.sh on $(date)
+
+# SMTP Configuration for Email Reminders
+SMTP_HOST=$SMTP_HOST
+SMTP_PORT=$SMTP_PORT
+SMTP_USER=$SMTP_USER
+SMTP_PASS=$SMTP_PASS
+
+# Email Settings
+FROM_NAME=$FROM_NAME
+FROM_EMAIL=$FROM_EMAIL
+
+# Rate Limiting (optional)
+RATE_LIMIT_WINDOW_MS=$RATE_LIMIT_WINDOW_MS
+RATE_LIMIT_MAX_REQUESTS=$RATE_LIMIT_MAX_REQUESTS
+
+# Application Settings
+NODE_ENV=production
+EOF
+    
+    # Also create backend .env file
+    print_status "Creating backend .env file..."
+    cat > backend/.env << EOF
+# Backend Environment Configuration
+# Generated by docker-setup.sh on $(date)
+
+# SMTP Configuration for Email Reminders
+SMTP_HOST=$SMTP_HOST
+SMTP_PORT=$SMTP_PORT
+SMTP_USER=$SMTP_USER
+SMTP_PASS=$SMTP_PASS
+
+# Email Settings
+FROM_NAME=$FROM_NAME
+FROM_EMAIL=$FROM_EMAIL
+
+# Rate Limiting (optional)
+RATE_LIMIT_WINDOW_MS=$RATE_LIMIT_WINDOW_MS
+RATE_LIMIT_MAX_REQUESTS=$RATE_LIMIT_MAX_REQUESTS
+
+# Application Settings
+NODE_ENV=production
+PORT=3001
+EOF
+    
+    print_success "Environment files created successfully!"
+    print_status "Frontend .env: $(pwd)/.env"
+    print_status "Backend .env: $(pwd)/backend/.env"
 }
 
 # Function to build and start containers

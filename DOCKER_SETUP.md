@@ -13,8 +13,51 @@ The easiest way to get started is to run the automated setup script:
 This script will:
 - Detect your operating system
 - Install Docker if not present
+- **Interactively configure environment variables** (SMTP settings, email configuration)
 - Set up the complete application environment
 - Start all services automatically
+
+### Interactive Environment Setup
+
+The setup script includes a comprehensive interactive environment configuration:
+
+1. **Environment File Detection**: Automatically detects if `.env` files exist
+2. **Configuration Options**: Choose to use existing, recreate, or edit manually
+3. **Guided Setup**: Step-by-step prompts for all required settings
+4. **Input Validation**: Validates email addresses and port numbers
+5. **Configuration Summary**: Shows a summary before creating files
+6. **Confirmation**: Asks for confirmation before saving configuration
+
+**Example Interactive Session:**
+```
+================================
+SMTP Configuration
+================================
+Configure your SMTP settings for email reminders
+
+SMTP Host (e.g., smtp.gmail.com) [smtp.gmail.com]: 
+SMTP Port [587]: 
+SMTP Username (your email address): your-email@gmail.com
+SMTP Password (App Password for Gmail): 
+From Name (sender display name) [Todo Reminder]: 
+From Email (sender email address) [your-email@gmail.com]: 
+Rate Limit Window (milliseconds) [900000]: 
+Max Requests per Window [100]: 
+
+================================
+Configuration Summary
+================================
+SMTP Host: smtp.gmail.com
+SMTP Port: 587
+SMTP User: your-email@gmail.com
+SMTP Password: your****
+From Name: Todo Reminder
+From Email: your-email@gmail.com
+Rate Limit Window: 900000 ms
+Max Requests: 100
+
+Is this configuration correct? [y/n]: y
+```
 
 ## Prerequisites
 
@@ -65,6 +108,26 @@ brew install --cask docker
 Download and install Docker Desktop from: https://www.docker.com/products/docker-desktop/
 
 ### 2. Configure Environment
+
+The setup script will automatically guide you through environment configuration:
+
+```bash
+# The script will detect if .env files exist and offer options:
+# - Use existing configuration
+# - Recreate configuration
+# - Edit manually
+
+# Interactive prompts will ask for:
+# - SMTP Host (default: smtp.gmail.com)
+# - SMTP Port (default: 587)
+# - SMTP Username (your email address)
+# - SMTP Password (App Password for Gmail)
+# - From Name (sender display name)
+# - From Email (sender email address)
+# - Rate limiting settings (optional)
+```
+
+**Manual Configuration (if needed):**
 
 Copy the environment template and configure your settings:
 

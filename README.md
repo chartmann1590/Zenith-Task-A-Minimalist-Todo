@@ -46,6 +46,7 @@ The easiest way to get started is using Docker. This will automatically handle a
 This script will:
 - Detect your operating system
 - Install Docker if not present
+- **Interactively configure environment variables** (SMTP settings, email configuration)
 - Set up the complete application environment
 - Start all services automatically
 
