@@ -72,10 +72,6 @@ jobs:
           -p 3001:3001 \
           -e NODE_ENV=test \
           -e PORT=3001 \
-          -e SMTP_HOST=smtp.ethereal.email \
-          -e SMTP_PORT=587 \
-          -e SMTP_USER=test@example.com \
-          -e SMTP_PASS=testpassword \
           todo-backend:test
         
         # Wait for container to start

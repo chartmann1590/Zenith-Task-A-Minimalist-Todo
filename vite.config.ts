@@ -9,9 +9,14 @@ export default defineConfig({
   build: {
     minify: true,
     sourcemap: 'inline', // Use inline source maps for better error reporting
+    chunkSizeWarningLimit: 1000, // Increase chunk size warning limit to 1MB
     rollupOptions: {
       output: {
         sourcemapExcludeSources: false, // Include original source in source maps
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+        },
       },
     },
   },

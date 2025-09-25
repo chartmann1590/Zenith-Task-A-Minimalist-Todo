@@ -39,13 +39,8 @@ jobs:
         cd backend
         npm test
       env:
-        # Use test SMTP configuration
-        SMTP_HOST: smtp.ethereal.email
-        SMTP_PORT: 587
-        SMTP_USER: test@example.com
-        SMTP_PASS: testpassword
-        FROM_NAME: Test Todo Reminder
-        FROM_EMAIL: test@example.com
+        # Skip SMTP test in CI (no real credentials needed)
+        NODE_ENV: test
         
     - name: Start backend server
       run: |
@@ -55,10 +50,6 @@ jobs:
       env:
         PORT: 3001
         NODE_ENV: test
-        SMTP_HOST: smtp.ethereal.email
-        SMTP_PORT: 587
-        SMTP_USER: test@example.com
-        SMTP_PASS: testpassword
         
     - name: Health check
       run: |

@@ -27,5 +27,6 @@ dist-ssr
 .wrangler
 .dev.vars*
 .env.*
+backend/.env
 
 data/
