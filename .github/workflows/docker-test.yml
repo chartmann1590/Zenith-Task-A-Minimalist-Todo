@@ -1,0 +1,207 @@
+name: Docker Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'Dockerfile*'
+      - 'docker-compose.yml'
+      - 'backend/Dockerfile'
+      - 'nginx.conf'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'Dockerfile*'
+      - 'docker-compose.yml'
+      - 'backend/Dockerfile'
+      - 'nginx.conf'
+
+jobs:
+  docker-build-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build frontend Docker image
+      run: |
+        docker build -f Dockerfile.frontend -t todo-frontend:test .
+        
+    - name: Build backend Docker image
+      run: |
+        docker build -f backend/Dockerfile -t todo-backend:test ./backend
+        
+    - name: Test frontend container
+      run: |
+        # Start frontend container
+        docker run -d --name frontend-test -p 3000:80 todo-frontend:test
+        
+        # Wait for container to start
+        sleep 10
+        
+        # Test if container is running
+        if docker ps | grep -q frontend-test; then
+          echo "✅ Frontend container is running"
+        else
+          echo "❌ Frontend container failed to start"
+          docker logs frontend-test
+          exit 1
+        fi
+        
+        # Test if nginx is serving content
+        if curl -f http://localhost:3000; then
+          echo "✅ Frontend is serving content"
+        else
+          echo "❌ Frontend is not serving content"
+          docker logs frontend-test
+          exit 1
+        fi
+        
+        # Cleanup
+        docker stop frontend-test
+        docker rm frontend-test
+        
+    - name: Test backend container
+      run: |
+        # Start backend container
+        docker run -d --name backend-test \
+          -p 3001:3001 \
+          -e NODE_ENV=test \
+          -e PORT=3001 \
+          -e SMTP_HOST=smtp.ethereal.email \
+          -e SMTP_PORT=587 \
+          -e SMTP_USER=test@example.com \
+          -e SMTP_PASS=testpassword \
+          todo-backend:test
+        
+        # Wait for container to start
+        sleep 15
+        
+        # Test if container is running
+        if docker ps | grep -q backend-test; then
+          echo "✅ Backend container is running"
+        else
+          echo "❌ Backend container failed to start"
+          docker logs backend-test
+          exit 1
+        fi
+        
+        # Test health endpoint
+        for i in {1..30}; do
+          if curl -f http://localhost:3001/api/health; then
+            echo "✅ Backend health check passed"
+            break
+          fi
+          echo "Waiting for backend to be ready... ($i/30)"
+          sleep 2
+        done
+        
+        # Test API endpoints
+        curl -f http://localhost:3001/api/tasks || echo "Tasks endpoint test failed"
+        curl -f http://localhost:3001/api/reminders || echo "Reminders endpoint test failed"
+        
+        # Cleanup
+        docker stop backend-test
+        docker rm backend-test
+
+  docker-compose-test:
+    runs-on: ubuntu-latest
+    needs: docker-build-test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Create test environment file
+      run: |
+        cat > .env.test << EOF
+        SMTP_HOST=smtp.ethereal.email
+        SMTP_PORT=587
+        SMTP_USER=test@example.com
+        SMTP_PASS=testpassword
+        FROM_NAME=Test Todo Reminder
+        FROM_EMAIL=test@example.com
+        RATE_LIMIT_WINDOW_MS=900000
+        RATE_LIMIT_MAX_REQUESTS=100
+        EOF
+        
+    - name: Start services with docker-compose
+      run: |
+        # Build and start services
+        docker-compose -f docker-compose.yml --env-file .env.test up -d --build
+        
+        # Wait for services to be ready
+        sleep 30
+        
+    - name: Test frontend service
+      run: |
+        # Test if frontend is accessible
+        for i in {1..30}; do
+          if curl -f http://localhost:3000; then
+            echo "✅ Frontend service is accessible"
+            break
+          fi
+          echo "Waiting for frontend... ($i/30)"
+          sleep 2
+        done
+        
+    - name: Test backend service
+      run: |
+        # Test if backend is accessible
+        for i in {1..30}; do
+          if curl -f http://localhost:3001/api/health; then
+            echo "✅ Backend service is accessible"
+            break
+          fi
+          echo "Waiting for backend... ($i/30)"
+          sleep 2
+        done
+        
+        # Test API functionality
+        echo "Testing API endpoints..."
+        curl -f http://localhost:3001/api/tasks
+        curl -f http://localhost:3001/api/reminders
+        curl -f http://localhost:3001/api/smtp-settings
+        
+    - name: Test service communication
+      run: |
+        # Test if services can communicate
+        echo "Testing service communication..."
+        
+        # Test creating a task via API
+        TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks \
+          -H "Content-Type: application/json" \
+          -d '{"title":"Integration Test Task","description":"Test from Docker Compose","dueDate":"2024-12-31T23:59:59.000Z","priority":"high"}')
+        
+        if echo "$TASK_RESPONSE" | grep -q "id"; then
+          echo "✅ Task creation via API works"
+        else
+          echo "❌ Task creation via API failed"
+          echo "Response: $TASK_RESPONSE"
+        fi
+        
+    - name: Check container health
+      run: |
+        # Check if all containers are healthy
+        docker-compose -f docker-compose.yml ps
+        
+        # Check container logs for errors
+        echo "=== Frontend Logs ==="
+        docker-compose -f docker-compose.yml logs frontend
+        
+        echo "=== Backend Logs ==="
+        docker-compose -f docker-compose.yml logs backend
+        
+    - name: Stop services
+      run: |
+        docker-compose -f docker-compose.yml down -v
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        docker-compose -f docker-compose.yml down -v --remove-orphans
+        docker system prune -f

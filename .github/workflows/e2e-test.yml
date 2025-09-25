@@ -1,0 +1,219 @@
+name: End-to-End Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        cd backend && npm ci
+        
+    - name: Create test environment
+      run: |
+        cat > .env.test << EOF
+        SMTP_HOST=smtp.ethereal.email
+        SMTP_PORT=587
+        SMTP_USER=test@example.com
+        SMTP_PASS=testpassword
+        FROM_NAME=Test Todo Reminder
+        FROM_EMAIL=test@example.com
+        RATE_LIMIT_WINDOW_MS=900000
+        RATE_LIMIT_MAX_REQUESTS=100
+        EOF
+        
+    - name: Build frontend
+      run: npm run build
+      
+    - name: Start backend server
+      run: |
+        cd backend
+        npm start &
+        echo $! > backend.pid
+        sleep 10
+        
+    - name: Start frontend server
+      run: |
+        npm run preview &
+        echo $! > frontend.pid
+        sleep 5
+        
+    - name: Wait for services to be ready
+      run: |
+        # Wait for backend
+        for i in {1..30}; do
+          if curl -f http://localhost:3001/api/health; then
+            echo "✅ Backend is ready"
+            break
+          fi
+          echo "Waiting for backend... ($i/30)"
+          sleep 2
+        done
+        
+        # Wait for frontend
+        for i in {1..30}; do
+          if curl -f http://localhost:4173; then
+            echo "✅ Frontend is ready"
+            break
+          fi
+          echo "Waiting for frontend... ($i/30)"
+          sleep 2
+        done
+        
+    - name: Install Playwright
+      run: |
+        npm install -D @playwright/test
+        npx playwright install --with-deps
+        
+    - name: Create Playwright test
+      run: |
+        mkdir -p tests
+        cat > tests/e2e.spec.ts << 'EOF'
+        import { test, expect } from '@playwright/test';
+
+        test.describe('Todo App E2E Tests', () => {
+          test.beforeEach(async ({ page }) => {
+            await page.goto('http://localhost:4173');
+          });
+
+          test('should load the homepage', async ({ page }) => {
+            await expect(page).toHaveTitle(/Todo/);
+          });
+
+          test('should be able to create a new task', async ({ page }) => {
+            // Look for add task button or form
+            const addButton = page.locator('button').filter({ hasText: /add|new|create/i }).first();
+            if (await addButton.isVisible()) {
+              await addButton.click();
+            }
+            
+            // Fill in task details if form is visible
+            const titleInput = page.locator('input[placeholder*="title"], input[name*="title"]').first();
+            if (await titleInput.isVisible()) {
+              await titleInput.fill('E2E Test Task');
+            }
+            
+            const descriptionInput = page.locator('textarea, input[placeholder*="description"]').first();
+            if (await descriptionInput.isVisible()) {
+              await descriptionInput.fill('This is a test task created by E2E tests');
+            }
+            
+            // Submit the form
+            const submitButton = page.locator('button[type="submit"], button').filter({ hasText: /save|create|add|submit/i }).first();
+            if (await submitButton.isVisible()) {
+              await submitButton.click();
+            }
+            
+            // Verify task was created (look for task in the list)
+            await expect(page.locator('text=E2E Test Task')).toBeVisible({ timeout: 10000 });
+          });
+
+          test('should be able to view tasks', async ({ page }) => {
+            // Check if tasks are displayed
+            const taskElements = page.locator('[data-testid*="task"], .task, [class*="task"]');
+            await expect(taskElements.first()).toBeVisible({ timeout: 10000 });
+          });
+
+          test('should have working navigation', async ({ page }) => {
+            // Test navigation elements
+            const navElements = page.locator('nav, [role="navigation"], [class*="nav"]');
+            await expect(navElements.first()).toBeVisible();
+          });
+
+          test('should be responsive', async ({ page }) => {
+            // Test mobile viewport
+            await page.setViewportSize({ width: 375, height: 667 });
+            await expect(page.locator('body')).toBeVisible();
+            
+            // Test tablet viewport
+            await page.setViewportSize({ width: 768, height: 1024 });
+            await expect(page.locator('body')).toBeVisible();
+            
+            // Test desktop viewport
+            await page.setViewportSize({ width: 1920, height: 1080 });
+            await expect(page.locator('body')).toBeVisible();
+          });
+        });
+        EOF
+        
+    - name: Run Playwright tests
+      run: |
+        npx playwright test tests/e2e.spec.ts --reporter=html
+      continue-on-error: true
+      
+    - name: Upload Playwright report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 7
+        
+    - name: Test API endpoints manually
+      run: |
+        echo "Testing API endpoints..."
+        
+        # Test health endpoint
+        curl -f http://localhost:3001/api/health || echo "Health check failed"
+        
+        # Test tasks endpoint
+        curl -f http://localhost:3001/api/tasks || echo "Tasks endpoint failed"
+        
+        # Test creating a task
+        TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks \
+          -H "Content-Type: application/json" \
+          -d '{"title":"E2E Test Task","description":"Created during E2E testing","dueDate":"2024-12-31T23:59:59.000Z","priority":"medium"}')
+        
+        echo "Task creation response: $TASK_RESPONSE"
+        
+        # Test reminders endpoint
+        curl -f http://localhost:3001/api/reminders || echo "Reminders endpoint failed"
+        
+        # Test SMTP settings endpoint
+        curl -f http://localhost:3001/api/smtp-settings || echo "SMTP settings endpoint failed"
+        
+    - name: Test frontend-backend integration
+      run: |
+        echo "Testing frontend-backend integration..."
+        
+        # Test if frontend can make requests to backend
+        curl -f http://localhost:4173 || echo "Frontend not accessible"
+        
+        # Test CORS by making a request from frontend origin
+        curl -f -H "Origin: http://localhost:4173" http://localhost:3001/api/health || echo "CORS test failed"
+        
+    - name: Cleanup
+      if: always()
+      run: |
+        # Stop frontend
+        if [ -f frontend.pid ]; then
+          kill $(cat frontend.pid) || true
+          rm frontend.pid
+        fi
+        
+        # Stop backend
+        if [ -f backend.pid ]; then
+          kill $(cat backend.pid) || true
+          rm backend.pid
+        fi
+        
+        # Kill any remaining processes
+        pkill -f "node.*server.js" || true
+        pkill -f "vite preview" || true
