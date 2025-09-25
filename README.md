@@ -34,6 +34,44 @@ Follow these instructions to get the project up and running on your local machin
 - [Node.js](https://nodejs.org/) installed on your machine (for backend)
 - SMTP email account (Gmail recommended)
 
+## 🐳 Docker Setup (Recommended)
+
+The easiest way to get started is using Docker. This will automatically handle all dependencies and setup:
+
+```bash
+# Run the automated Docker setup script
+./docker-setup.sh
+```
+
+This script will:
+- Detect your operating system
+- Install Docker if not present
+- Set up the complete application environment
+- Start all services automatically
+
+**Application URLs after setup:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001
+- Health Check: http://localhost:3001/api/health
+
+For detailed Docker setup instructions, see [DOCKER_SETUP.md](./DOCKER_SETUP.md).
+
+### Docker Commands
+
+```bash
+# Start the application
+docker compose up -d
+
+# Stop the application
+docker compose down
+
+# View logs
+docker compose logs -f
+
+# Test the setup
+./test-docker-setup.sh
+```
+
 ### Quick Start
 
 1. **Clone the repository:**
