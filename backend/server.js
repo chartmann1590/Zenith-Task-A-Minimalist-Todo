@@ -175,10 +175,46 @@ async function sendEmail(to, subject, html, text) {
   }
 }
 
+// Sanitize HTML content to prevent XSS
+function sanitizeHtml(html) {
+  // Basic HTML sanitization - remove script tags and dangerous attributes
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
+    .replace(/<link\b[^<]*(?:(?!<\/link>)<[^<]*)*<\/link>/gi, '')
+    .replace(/<meta\b[^<]*(?:(?!<\/meta>)<[^<]*)*<\/meta>/gi, '')
+    .replace(/on\w+="[^"]*"/gi, '')
+    .replace(/on\w+='[^']*'/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '');
+}
+
+// Escape HTML entities to prevent XSS
+function escapeHtml(text) {
+  if (typeof text !== 'string') return text;
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
 // Generate email template
 function generateReminderEmail(task) {
   const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date';
   const priority = task.priority ? task.priority.charAt(0).toUpperCase() + task.priority.slice(1) : 'Normal';
+  
+  // Sanitize user input
+  const safeTitle = escapeHtml(task.title);
+  const safeDueDate = escapeHtml(dueDate);
+  const safePriority = escapeHtml(priority);
+  const safeReminderTime = escapeHtml(new Date(task.reminderTime).toLocaleString());
+  const safePriorityClass = escapeHtml(task.priority || 'normal');
   
   const html = `
     <!DOCTYPE html>
@@ -210,17 +246,17 @@ function generateReminderEmail(task) {
       </div>
       <div class="content">
         <div class="task-card">
-          <div class="task-title">${task.title}</div>
+          <div class="task-title">${safeTitle}</div>
           <div class="task-details">
             <div class="detail-item">
-              <span class="label">Due Date:</span> ${dueDate}
+              <span class="label">Due Date:</span> ${safeDueDate}
             </div>
             <div class="detail-item">
               <span class="label">Priority:</span> 
-              <span class="priority-${task.priority || 'normal'}">${priority}</span>
+              <span class="priority-${safePriorityClass}">${safePriority}</span>
             </div>
             <div class="detail-item">
-              <span class="label">Reminder Time:</span> ${new Date(task.reminderTime).toLocaleString()}
+              <span class="label">Reminder Time:</span> ${safeReminderTime}
             </div>
           </div>
         </div>
@@ -246,7 +282,10 @@ This is a friendly reminder about your task. Make sure to complete it on time!
 This email was sent from your Todo Reminder App.
   `;
 
-  return { html, text };
+  // Sanitize the final HTML
+  const sanitizedHtml = sanitizeHtml(html);
+
+  return { html: sanitizedHtml, text };
 }
 
 // API Routes
