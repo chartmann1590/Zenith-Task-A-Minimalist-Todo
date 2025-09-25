@@ -86,7 +86,7 @@ const taskSchema = Joi.object({
   order: Joi.number().required(),
   reminderEnabled: Joi.boolean().required(),
   reminderTime: Joi.number().allow(null),
-  userEmail: Joi.string().email().required()
+  userEmail: Joi.string().email().optional()
 });
 
 // SMTP Transporter
@@ -503,12 +503,12 @@ app.post('/api/reminders/send/:taskId', async (req, res) => {
       });
     }
 
-    // Use task.userEmail if available, otherwise fall back to configured toEmail
-    const recipientEmail = task.userEmail || smtpSettings.toEmail;
+    // Always use the configured default toEmail for reminders
+    const recipientEmail = smtpSettings.toEmail;
     if (!recipientEmail) {
       return res.status(400).json({
         success: false,
-        error: 'No recipient email configured. Please set userEmail on task or configure toEmail in SMTP settings.'
+        error: 'No recipient email configured. Please configure toEmail in SMTP settings.'
       });
     }
 
@@ -567,8 +567,8 @@ cron.schedule('* * * * *', async () => {
         
         if (task && !task.completed && task.reminderEnabled) {
           try {
-            // Use task.userEmail if available, otherwise fall back to configured toEmail
-            const recipientEmail = task.userEmail || smtpSettings.toEmail;
+            // Always use the configured default toEmail for reminders
+            const recipientEmail = smtpSettings.toEmail;
             
             if (!recipientEmail) {
               console.error(`No recipient email configured for task: ${task.title}`);
