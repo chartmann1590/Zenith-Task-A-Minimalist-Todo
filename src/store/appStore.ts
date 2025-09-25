@@ -22,6 +22,7 @@ type AppState = {
 
 type AppActions = {
   initializeApp: () => void;
+  loadSmtpSettings: () => Promise<void>;
   updateSettings: (settings: SmtpSettings) => Promise<void>;
   testSMTPConnection: () => Promise<boolean>;
   sendTestEmail: (email: string) => Promise<boolean>;
@@ -78,6 +79,27 @@ export const useAppStore = create<AppState & AppActions>()(
       }, 500);
     },
 
+    loadSmtpSettings: async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/smtp/settings`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          set({ 
+            smtpSettings: {
+              host: result.data.host || '',
+              port: result.data.port || 587,
+              user: result.data.user || '',
+              pass: '' // Don't load password for security
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error loading SMTP settings:', error);
+        toast.error('Failed to load SMTP settings from server');
+      }
+    },
+
     updateSettings: async (settings) => {
       try {
         const response = await fetch(`${API_BASE_URL}/smtp/settings`, {
@@ -92,7 +114,15 @@ export const useAppStore = create<AppState & AppActions>()(
         
         if (result.success) {
           set({ smtpSettings: settings });
-          toast.success('SMTP settings saved and tested successfully!');
+          
+          // Check if SMTP connection test was successful
+          if (result.data && result.data.configured) {
+            toast.success('SMTP settings saved and tested successfully!');
+          } else {
+            const errorMsg = result.data?.testResult?.error || 'SMTP connection test failed';
+            toast.warning(`Settings saved but SMTP test failed: ${errorMsg}. Please check your credentials and try again.`);
+            // Don't throw error - allow settings to be saved even if test fails
+          }
         } else {
           toast.error(`Failed to save settings: ${result.error}`);
           throw new Error(result.error);
