@@ -175,21 +175,37 @@ async function sendEmail(to, subject, html, text) {
   }
 }
 
+// Helper for repeated replacements to fully sanitize multi-character patterns
+function repeatReplace(str, regex, replacement) {
+  let prev;
+  do {
+    prev = str;
+    str = str.replace(regex, replacement);
+  } while (str !== prev);
+  return str;
+}
+
 // Sanitize HTML content to prevent XSS
 function sanitizeHtml(html) {
   // Basic HTML sanitization - remove script tags and dangerous attributes
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
-    .replace(/<link\b[^<]*(?:(?!<\/link>)<[^<]*)*<\/link>/gi, '')
-    .replace(/<meta\b[^<]*(?:(?!<\/meta>)<[^<]*)*<\/meta>/gi, '')
-    .replace(/on\w+="[^"]*"/gi, '')
-    .replace(/on\w+='[^']*'/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/vbscript:/gi, '')
-    .replace(/data:/gi, '');
+  const patterns = [
+    [/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ''],
+    [/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, ''],
+    [/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, ''],
+    [/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, ''],
+    [/<link\b[^<]*(?:(?!<\/link>)<[^<]*)*<\/link>/gi, ''],
+    [/<meta\b[^<]*(?:(?!<\/meta>)<[^<]*)*<\/meta>/gi, ''],
+    [/on\w+="[^"]*"/gi, ''],
+    [/on\w+='[^']*'/gi, ''],
+    [/javascript:/gi, ''],
+    [/vbscript:/gi, ''],
+    [/data:/gi, ''],
+  ];
+  let sanitized = html;
+  for (const [re, rep] of patterns) {
+    sanitized = repeatReplace(sanitized, re, rep);
+  }
+  return sanitized;
 }
 
 // Escape HTML entities to prevent XSS
