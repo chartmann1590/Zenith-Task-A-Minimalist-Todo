@@ -91,16 +91,24 @@ jobs:
         
         # Test frontend container
         docker run -d --name frontend-test -p 3000:80 todo-frontend:test
-        sleep 10
+        sleep 15
+        
+        # Wait for nginx to start and test
+        for i in {1..30}; do
+          if curl -f http://localhost:3000 > /dev/null 2>&1; then
+            echo "✅ Frontend container test passed"
+            break
+          fi
+          echo "Waiting for frontend... ($i/30)"
+          sleep 2
+        done
+        
         curl -f http://localhost:3000 || exit 1
         docker stop frontend-test && docker rm frontend-test
         
         # Test backend container
         docker run -d --name backend-test -p 3001:3001 \
           -e NODE_ENV=test \
-          -e SMTP_HOST=smtp.ethereal.email \
-          -e SMTP_USER=test@example.com \
-          -e SMTP_PASS=testpassword \
           todo-backend:test
         sleep 15
         curl -f http://localhost:3001/api/health || exit 1

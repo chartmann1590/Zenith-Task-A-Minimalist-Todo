@@ -119,6 +119,7 @@ jobs:
       if: always()
       with:
         sarif_file: 'trivy-frontend-results.sarif'
+        category: trivy-frontend
         
     - name: Run Trivy vulnerability scanner (Backend)
       uses: aquasecurity/trivy-action@master
@@ -132,6 +133,7 @@ jobs:
       if: always()
       with:
         sarif_file: 'trivy-backend-results.sarif'
+        category: trivy-backend
 
   secrets-scan:
     runs-on: ubuntu-latest

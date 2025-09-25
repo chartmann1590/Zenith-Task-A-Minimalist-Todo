@@ -41,7 +41,7 @@ jobs:
         docker run -d --name frontend-test -p 3000:80 todo-frontend:test
         
         # Wait for container to start
-        sleep 10
+        sleep 15
         
         # Test if container is running
         if docker ps | grep -q frontend-test; then
@@ -52,10 +52,18 @@ jobs:
           exit 1
         fi
         
-        # Test if nginx is serving content
-        if curl -f http://localhost:3000; then
-          echo "✅ Frontend is serving content"
-        else
+        # Wait for nginx to start and test if serving content
+        for i in {1..30}; do
+          if curl -f http://localhost:3000 > /dev/null 2>&1; then
+            echo "✅ Frontend is serving content"
+            break
+          fi
+          echo "Waiting for frontend to serve content... ($i/30)"
+          sleep 2
+        done
+        
+        # Final test
+        if ! curl -f http://localhost:3000; then
           echo "❌ Frontend is not serving content"
           docker logs frontend-test
           exit 1
@@ -173,7 +181,7 @@ jobs:
           -H "Content-Type: application/json" \
           -d '{"tasks":[{"id":"integration-test-task","title":"Integration Test Task","dueDate":1735689599000,"priority":"high","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":false,"reminderTime":null,"userEmail":"test@example.com"}]}')
         
-        if echo "$TASK_RESPONSE" | grep -q "id"; then
+        if echo "$TASK_RESPONSE" | grep -q "success.*true"; then
           echo "✅ Task creation via API works"
         else
           echo "❌ Task creation via API failed"

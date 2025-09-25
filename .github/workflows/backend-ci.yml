@@ -82,7 +82,7 @@ jobs:
           -H "Content-Type: application/json" \
           -d '{"tasks":[{"id":"test-task-1","title":"Test Task","dueDate":1735689599000,"priority":"medium","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":false,"reminderTime":null,"userEmail":"test@example.com"}]}')
         
-        if echo "$TASK_RESPONSE" | grep -q "id"; then
+        if echo "$TASK_RESPONSE" | grep -q "success.*true"; then
           echo "✅ Task creation test passed"
         else
           echo "❌ Task creation test failed"
@@ -95,7 +95,7 @@ jobs:
           -H "Content-Type: application/json" \
           -d '{"email":"test@example.com"}')
         
-        if echo "$REMINDER_RESPONSE" | grep -q "id"; then
+        if echo "$REMINDER_RESPONSE" | grep -q "success.*true"; then
           echo "✅ Reminder creation test passed"
         else
           echo "❌ Reminder creation test failed"
