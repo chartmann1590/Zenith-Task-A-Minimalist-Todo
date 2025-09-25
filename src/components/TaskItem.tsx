@@ -89,7 +89,7 @@ export function TaskItem({ task }: TaskItemProps) {
         checked={task.completed}
         onCheckedChange={handleToggle}
         className="h-5 w-5 rounded-full"
-        aria-label={`Mark task "${task.title}" as ${task.completed ? 'incomplete' : 'complete'}`}
+        aria-label={`Mark task as ${task.completed ? 'incomplete' : 'complete'}`}
       />
       <div className="flex-grow" onDoubleClick={() => !task.completed && setIsEditing(true)}>
         {isEditing ? (
@@ -148,7 +148,7 @@ export function TaskItem({ task }: TaskItemProps) {
             <SelectItem value="high"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-red-500" /> High</div></SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="ghost" size="icon" onClick={handleDelete} className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive" aria-label={`Delete task "${task.title}"`}>
+        <Button variant="ghost" size="icon" onClick={handleDelete} className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive" aria-label="Delete task">
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>

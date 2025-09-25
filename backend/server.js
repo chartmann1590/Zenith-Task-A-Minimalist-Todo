@@ -271,11 +271,11 @@ function generateReminderEmail(task) {
   `;
 
   const text = `
-Task Reminder: ${task.title}
+Task Reminder: ${safeTitle}
 
-Due Date: ${dueDate}
-Priority: ${priority}
-Reminder Time: ${new Date(task.reminderTime).toLocaleString()}
+Due Date: ${safeDueDate}
+Priority: ${safePriority}
+Reminder Time: ${safeReminderTime}
 
 This is a friendly reminder about your task. Make sure to complete it on time!
 
@@ -600,7 +600,7 @@ app.post('/api/reminders/send/:taskId', async (req, res) => {
     }
 
     const { html, text } = generateReminderEmail(task);
-    await sendEmail(recipientEmail, `Reminder: ${task.title}`, html, text);
+    await sendEmail(recipientEmail, `Reminder: ${safeTitle}`, html, text);
     
     res.json({
       success: true,
@@ -675,27 +675,30 @@ cron.schedule('* * * * *', async () => {
         
         if (task && !task.completed && task.reminderEnabled) {
           try {
+            // Sanitize task title for safe logging
+            const safeTitle = escapeHtml(task.title);
+            
             // Always use the configured default toEmail for reminders
             const recipientEmail = smtpSettings.toEmail;
             
             if (!recipientEmail) {
-              console.error(`No recipient email configured for task: ${task.title}`);
+              console.error(`No recipient email configured for task: ${safeTitle}`);
               continue;
             }
 
             // In test environment, skip actual email sending
             if (process.env.NODE_ENV === 'test') {
               await db.markReminderSent(reminder.taskId);
-              console.log(`Reminder would be sent for task: ${task.title} to ${recipientEmail} (test mode)`);
+              console.log(`Reminder would be sent for task: ${safeTitle} to ${recipientEmail} (test mode)`);
             } else {
               const { html, text } = generateReminderEmail(task);
-              await sendEmail(recipientEmail, `Reminder: ${task.title}`, html, text);
+              await sendEmail(recipientEmail, `Reminder: ${safeTitle}`, html, text);
               
               await db.markReminderSent(reminder.taskId);
-              console.log(`Reminder sent for task: ${task.title} to ${recipientEmail}`);
+              console.log(`Reminder sent for task: ${safeTitle} to ${recipientEmail}`);
             }
           } catch (error) {
-            console.error(`Failed to send reminder for task ${task.title}:`, error);
+            console.error(`Failed to send reminder for task ${safeTitle}:`, error);
           }
         }
       }

@@ -48,22 +48,22 @@ fi
 # Wait for services to be ready
 echo "⏳ Waiting for services to be ready..."
 echo "Checking backend health..."
-for i in {1..30}; do
+for i in {1..60}; do
   if curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
     echo "✅ Backend is ready"
     break
   fi
-  echo "Backend not ready yet, waiting... ($i/30)"
+  echo "Backend not ready yet, waiting... ($i/60)"
   sleep 2
 done
 
 echo "Checking frontend..."
-for i in {1..15}; do
+for i in {1..30}; do
   if curl -f http://localhost:3000 > /dev/null 2>&1; then
     echo "✅ Frontend is ready"
     break
   fi
-  echo "Frontend not ready yet, waiting... ($i/15)"
+  echo "Frontend not ready yet, waiting... ($i/30)"
   sleep 2
 done
 

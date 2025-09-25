@@ -76,34 +76,32 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
-  // Generate safe CSS without user input
-  const generateSafeCSS = () => {
-    return Object.entries(THEMES)
-      .map(
-        ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    // Sanitize color values to prevent XSS
-    const safeColor = color ? color.replace(/[<>"'&]/g, '') : null
-    return safeColor ? `  --color-${key}: ${safeColor};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n")
-  }
+  // Generate safe CSS without user input - using CSS custom properties
+  const cssVariables = Object.entries(THEMES).reduce((acc, [theme, prefix]) => {
+    const themeVars = colorConfig
+      .map(([key, itemConfig]) => {
+        const color =
+          itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+          itemConfig.color
+        // Sanitize color values to prevent XSS
+        const safeColor = color ? color.replace(/[<>"'&]/g, '') : null
+        return safeColor ? `--color-${key}: ${safeColor}` : null
+      })
+      .filter(Boolean)
+      .join('; ')
+    
+    if (themeVars) {
+      acc[`${prefix} [data-chart=${id}]`] = themeVars
+    }
+    return acc
+  }, {} as Record<string, string>)
 
   return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: generateSafeCSS(),
-      }}
-    />
+    <style>
+      {Object.entries(cssVariables).map(([selector, vars]) => (
+        `${selector} { ${vars}; }`
+      )).join('\n')}
+    </style>
   )
 }
 
