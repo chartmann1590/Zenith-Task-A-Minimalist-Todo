@@ -38,7 +38,7 @@ export default tseslint.config(
       'import/named': 'error',
       'import/default': 'error',
       'import/no-unresolved': ['error', { 
-        ignore: ['cloudflare:workers', 'agents'] 
+        ignore: ['agents'] 
       }],
 
       // CHANGED: Replaced the flawed rule with a more intelligent one.

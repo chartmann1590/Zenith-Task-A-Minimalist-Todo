@@ -1,28 +1,25 @@
 # Usage
 
 ## Overview
-Cloudflare Workers + React. Storage via a single Durable Object (DO) wrapped to support multiple entities.
+React-based todo application with local state management.
 - Frontend: React Router 6 + TypeScript + ShadCN UI
-- Backend: Hono Worker; persistence through one DO (no direct DO access)
+- State Management: Zustand for local state
 - Shared: Types in `shared/types.ts`
 
 ## ⚠️ IMPORTANT: Demo Content
-**The existing demo pages, mock data, and API endpoints are FOR TEMPLATE UNDERSTANDING ONLY.**
-- Replace `HomePage.tsx` and `DemoPage.tsx` with actual application pages
+**The existing demo pages and mock data are FOR TEMPLATE UNDERSTANDING ONLY.**
+- Replace `HomePage.tsx` with actual application pages
 - Remove or replace mock data in `shared/mock-data.ts` with real data structures
-- Remove or replace demo API endpoints (`/api/demo`, `/api/counter`) and implement actual business logic
-- The counter and demo items examples show DO patterns - replace with real functionality
+- Implement actual business logic for task management
 
 ## Tech
-- React Router 6, ShadCN UI, Tailwind, Lucide, Hono, TypeScript
+- React Router 6, ShadCN UI, Tailwind, Lucide, TypeScript
 
 ## Development Restrictions
 - **Tailwind Colors**: Hardcode custom colors in `tailwind.config.js`, NOT in `index.css`
 - **Components**: Use existing ShadCN components instead of writing custom ones
 - **Icons**: Import from `lucide-react` directly
 - **Error Handling**: ErrorBoundary components are pre-implemented
-- **Worker Patterns**: Follow exact patterns in `worker/index.ts` to avoid breaking functionality
-- **CRITICAL**: You CANNOT modify `wrangler.jsonc` - only use the single `GlobalDurableObject` binding
 
 ## Styling
 - Responsive, accessible
@@ -32,54 +29,33 @@ Cloudflare Workers + React. Storage via a single Durable Object (DO) wrapped to 
 ## Code Organization
 
 ### Frontend Structure
-- `src/pages/HomePage.tsx` - Homepage for user to see while you are working on the app
-- `src/pages/DemoPage.tsx` - Main demo showcasing Durable Object features
+- `src/pages/HomePage.tsx` - Main application page
+- `src/pages/SettingsPage.tsx` - Settings page for configuration
 - `src/components/ThemeToggle.tsx` - Theme switching component
 - `src/hooks/useTheme.ts` - Theme management hook
-
-### Backend Structure
-- `worker/index.ts` - Worker entrypoint (registers routes; do not change patterns)
-- `worker/user-routes.ts` - Add routes here using existing helpers
-- `worker/core-utils.ts` - DO + core index/entity utilities and HTTP helpers (**DO NOT MODIFY**)
-- `worker/entities.ts` - Demo entities (users, chats)
+- `src/store/appStore.ts` - Zustand store for state management
 
 ### Shared
-- `shared/types.ts` - API/data types
+- `shared/types.ts` - Application data types
 - `shared/mock-data.ts` - Demo-only; replace
 
-## API Patterns
+## State Management
 
-### Adding Endpoints (use Entities)
-In `worker/user-routes.ts`, use entity helpers from `worker/entities.ts` and response helpers from `worker/core-utils.ts`.
+### Using Zustand Store
+The application uses Zustand for state management. Access and update state through the store:
 ```ts
-import { ok, bad } from './core-utils';
-import { UserEntity } from './entities';
-app.post('/api/users', async (c) => {
-  const { name } = await c.req.json();
-  if (!name?.trim()) return bad(c, 'name required');
-  const user = await UserEntity.create(c.env, { id: crypto.randomUUID(), name: name.trim() });
-  return ok(c, user);
-});
+import { useAppStore } from '@/store/appStore';
+
+// In a component
+const projects = useAppStore((state) => state.projects);
+const addProject = useAppStore((state) => state.addProject);
 ```
 
-<!-- No direct DO methods in this template; use Entities/Index helpers instead. -->
-
 ### Type Safety
-- Always return `ApiResponse<T>`
-- Share types via `shared/types.ts`
-
-## Bindings
-CRITICAL: only `GlobalDurableObject` is available for stateful ops
-
-**YOU CANNOT**:
-- Modify `wrangler.jsonc` 
-- Add new Durable Objects or KV namespaces
-- Change binding names or add new bindings
-
-## Storage Patterns
-- Use Entities/Index utilities from `core-utils.ts`; avoid raw DO calls
-- Atomic ops via provided helpers
+- All types are defined in `shared/types.ts`
+- Use TypeScript for type safety throughout the application
 
 ## Frontend
-- Call `/api/*` endpoints directly
-- Handle loading/errors; use shared types
+- Use Zustand store for state management
+- Handle loading/errors with proper error boundaries
+- Use shared types for consistency

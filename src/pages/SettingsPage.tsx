@@ -120,7 +120,7 @@ export function SettingsPage() {
           </CardContent>
         </Card>
          <div className="mt-8 text-center text-xs text-muted-foreground">
-            <p>Built with ❤️ at Cloudflare</p>
+            <p>Built with ❤️ for productivity</p>
         </div>
       </div>
     </div>
