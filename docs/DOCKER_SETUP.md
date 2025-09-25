@@ -247,7 +247,7 @@ docker system prune -f
 Run the test suite to verify everything is working:
 
 ```bash
-./test-docker-setup.sh
+./test/test-docker-setup.sh
 ```
 
 ## Troubleshooting
@@ -399,7 +399,7 @@ volumes:
 If you encounter issues:
 
 1. Check the logs: `docker compose logs`
-2. Run the test suite: `./test-docker-setup.sh`
+2. Run the test suite: `./test/test-docker-setup.sh`
 3. Verify Docker installation: `docker --version`
 4. Check system resources: `docker stats`
 

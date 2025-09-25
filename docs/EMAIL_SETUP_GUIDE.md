@@ -90,7 +90,7 @@ The system will automatically send you an email at the reminder time!
 node test-system.js
 
 # Test SMTP configuration only
-cd backend
+cd test
 node test-email.js
 ```
 

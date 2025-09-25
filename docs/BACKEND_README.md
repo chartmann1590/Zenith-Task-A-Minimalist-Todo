@@ -132,10 +132,15 @@ The system runs a cron job every minute to check for due reminders:
 ```
 backend/
 ├── server.js          # Main server file
-├── test-email.js      # SMTP testing utility
 ├── package.json       # Dependencies
 ├── .env.example       # Environment template
 └── README.md          # This file
+
+test/
+├── test-email.js      # SMTP testing utility
+├── test-docker-setup.sh # Docker setup testing
+├── test-local.sh      # Local development testing
+└── test-nginx-config.sh # Nginx configuration testing
 ```
 
 ### Adding New Features
