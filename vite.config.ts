@@ -9,7 +9,7 @@ export default defineConfig({
   build: {
     minify: true,
     sourcemap: 'inline', // Use inline source maps for better error reporting
-    chunkSizeWarningLimit: 1000, // Increase chunk size warning limit to 1MB
+    chunkSizeWarningLimit: 5000, // Increase chunk size warning limit to 5MB
     rollupOptions: {
       output: {
         sourcemapExcludeSources: false, // Include original source in source maps
