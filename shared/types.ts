@@ -9,6 +9,7 @@ export interface Project {
   id: string;
   name: string;
   createdAt: number;
+  icon?: string;
 }
 // Defines the priority levels for a task
 export type TaskPriority = 'low' | 'medium' | 'high' | null;

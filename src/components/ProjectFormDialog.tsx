@@ -14,8 +14,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { IconSelector } from '@/components/IconSelector';
 const projectSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(50, 'Project name is too long'),
+  icon: z.string().optional(),
 });
 type ProjectFormData = z.infer<typeof projectSchema>;
 export function ProjectFormDialog() {
@@ -28,20 +30,21 @@ export function ProjectFormDialog() {
     resolver: zodResolver(projectSchema),
     defaultValues: {
       name: '',
+      icon: 'inbox',
     },
   });
   useEffect(() => {
     if (editingProject) {
-      form.reset({ name: editingProject.name });
+      form.reset({ name: editingProject.name, icon: editingProject.icon || 'inbox' });
     } else {
-      form.reset({ name: '' });
+      form.reset({ name: '', icon: 'inbox' });
     }
   }, [editingProject, form]);
   const onSubmit = (data: ProjectFormData) => {
     if (editingProject) {
-      updateProject(editingProject.id, data.name);
+      updateProject(editingProject.id, data.name, data.icon);
     } else {
-      addProject(data.name);
+      addProject(data.name, data.icon);
     }
     closeProjectDialog();
   };
@@ -64,6 +67,22 @@ export function ProjectFormDialog() {
                   <FormLabel>Project Name</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Home Remodel" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="icon"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Icon</FormLabel>
+                  <FormControl>
+                    <IconSelector
+                      selectedIcon={field.value}
+                      onIconSelect={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
