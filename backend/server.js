@@ -6,11 +6,16 @@ import cron from 'node-cron';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import Joi from 'joi';
+import path from 'path';
+import Database from './database.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialize database
+const db = new Database();
 
 // Middleware
 app.use(helmet({
@@ -50,16 +55,13 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// In-memory storage (in production, use a database)
+// SMTP settings will be loaded from database
 let smtpSettings = {
   host: process.env.SMTP_HOST || '',
   port: parseInt(process.env.SMTP_PORT) || 587,
   user: process.env.SMTP_USER || '',
   pass: process.env.SMTP_PASS || ''
 };
-
-let tasks = [];
-let reminders = [];
 
 // Validation schemas
 const smtpSettingsSchema = Joi.object({
@@ -244,17 +246,26 @@ app.get('/api/health', (req, res) => {
 });
 
 // Get SMTP settings
-app.get('/api/smtp/settings', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      host: smtpSettings.host,
-      port: smtpSettings.port,
-      user: smtpSettings.user,
-      // Don't send password in response
-      configured: !!(smtpSettings.host && smtpSettings.user && smtpSettings.pass)
-    }
-  });
+app.get('/api/smtp/settings', async (req, res) => {
+  try {
+    const settings = await db.getSmtpSettings();
+    res.json({
+      success: true,
+      data: {
+        host: settings.host,
+        port: settings.port,
+        user: settings.user,
+        // Don't send password in response
+        configured: !!(settings.host && settings.user && settings.pass)
+      }
+    });
+  } catch (error) {
+    console.error('Error getting SMTP settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get SMTP settings'
+    });
+  }
 });
 
 // Update SMTP settings
@@ -268,6 +279,8 @@ app.post('/api/smtp/settings', async (req, res) => {
       });
     }
 
+    // Save to database
+    await db.updateSmtpSettings(value);
     smtpSettings = value;
     transporter = null; // Reset transporter to use new settings
 
@@ -344,7 +357,7 @@ app.post('/api/smtp/test-email', async (req, res) => {
 });
 
 // Sync tasks from frontend
-app.post('/api/tasks/sync', (req, res) => {
+app.post('/api/tasks/sync', async (req, res) => {
   try {
     const { tasks: newTasks } = req.body;
     
@@ -366,24 +379,12 @@ app.post('/api/tasks/sync', (req, res) => {
       }
     }
 
-    tasks = newTasks;
-    
-    // Update reminders for tasks with reminderEnabled
-    reminders = tasks
-      .filter(task => task.reminderEnabled && task.reminderTime && !task.completed)
-      .map(task => ({
-        taskId: task.id,
-        userEmail: task.userEmail,
-        reminderTime: task.reminderTime,
-        sent: false
-      }));
+    // Sync tasks to database
+    const result = await db.syncTasks(newTasks);
 
     res.json({
       success: true,
-      data: {
-        tasksCount: tasks.length,
-        remindersCount: reminders.length
-      }
+      data: result
     });
   } catch (error) {
     console.error('Error syncing tasks:', error);
@@ -394,26 +395,89 @@ app.post('/api/tasks/sync', (req, res) => {
   }
 });
 
+// Get projects
+app.get('/api/projects', async (req, res) => {
+  try {
+    const projects = await db.getProjects();
+    res.json({
+      success: true,
+      data: projects
+    });
+  } catch (error) {
+    console.error('Error getting projects:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get projects'
+    });
+  }
+});
+
+// Add project
+app.post('/api/projects', async (req, res) => {
+  try {
+    const { id, name, createdAt } = req.body;
+    
+    if (!id || !name || !createdAt) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: id, name, createdAt'
+      });
+    }
+
+    await db.addProject({ id, name, createdAt });
+    
+    res.json({
+      success: true,
+      data: { id }
+    });
+  } catch (error) {
+    console.error('Error adding project:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add project'
+    });
+  }
+});
+
 // Get tasks
-app.get('/api/tasks', (req, res) => {
-  res.json({
-    success: true,
-    data: tasks
-  });
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const tasks = await db.getTasks();
+    res.json({
+      success: true,
+      data: tasks
+    });
+  } catch (error) {
+    console.error('Error getting tasks:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get tasks'
+    });
+  }
 });
 
 // Get reminders
-app.get('/api/reminders', (req, res) => {
-  res.json({
-    success: true,
-    data: reminders
-  });
+app.get('/api/reminders', async (req, res) => {
+  try {
+    const reminders = await db.getReminders();
+    res.json({
+      success: true,
+      data: reminders
+    });
+  } catch (error) {
+    console.error('Error getting reminders:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get reminders'
+    });
+  }
 });
 
 // Send reminder manually
 app.post('/api/reminders/send/:taskId', async (req, res) => {
   try {
     const { taskId } = req.params;
+    const tasks = await db.getTasks();
     const task = tasks.find(t => t.id === taskId);
     
     if (!task) {
@@ -474,38 +538,74 @@ app.use('*', (req, res) => {
 
 // Cron job to check for reminders every minute
 cron.schedule('* * * * *', async () => {
-  const now = Date.now();
-  
-  for (const reminder of reminders) {
-    if (!reminder.sent && reminder.reminderTime <= now) {
-      const task = tasks.find(t => t.id === reminder.taskId);
-      
-      if (task && !task.completed && task.reminderEnabled) {
-        try {
-          // In test environment, skip actual email sending
-          if (process.env.NODE_ENV === 'test') {
-            reminder.sent = true;
-            console.log(`Reminder would be sent for task: ${task.title} to ${reminder.userEmail} (test mode)`);
-          } else {
-            const { html, text } = generateReminderEmail(task);
-            await sendEmail(reminder.userEmail, `Reminder: ${task.title}`, html, text);
-            
-            reminder.sent = true;
-            console.log(`Reminder sent for task: ${task.title} to ${reminder.userEmail}`);
+  try {
+    const now = Date.now();
+    const reminders = await db.getReminders();
+    const tasks = await db.getTasks();
+    
+    for (const reminder of reminders) {
+      if (!reminder.sent && reminder.reminderTime <= now) {
+        const task = tasks.find(t => t.id === reminder.taskId);
+        
+        if (task && !task.completed && task.reminderEnabled) {
+          try {
+            // In test environment, skip actual email sending
+            if (process.env.NODE_ENV === 'test') {
+              await db.markReminderSent(reminder.taskId);
+              console.log(`Reminder would be sent for task: ${task.title} to ${reminder.userEmail} (test mode)`);
+            } else {
+              const { html, text } = generateReminderEmail(task);
+              await sendEmail(reminder.userEmail, `Reminder: ${task.title}`, html, text);
+              
+              await db.markReminderSent(reminder.taskId);
+              console.log(`Reminder sent for task: ${task.title} to ${reminder.userEmail}`);
+            }
+          } catch (error) {
+            console.error(`Failed to send reminder for task ${task.title}:`, error);
           }
-        } catch (error) {
-          console.error(`Failed to send reminder for task ${task.title}:`, error);
         }
       }
     }
+  } catch (error) {
+    console.error('Error in reminder cron job:', error);
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📧 SMTP configured: ${!!(smtpSettings.host && smtpSettings.user && smtpSettings.pass)}`);
-  console.log(`⏰ Reminder cron job started`);
+// Initialize server
+async function startServer() {
+  try {
+    // Load SMTP settings from database
+    const dbSettings = await db.getSmtpSettings();
+    if (dbSettings.host) {
+      smtpSettings = dbSettings;
+    }
+    
+    // Start server
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📧 SMTP configured: ${!!(smtpSettings.host && smtpSettings.user && smtpSettings.pass)}`);
+      console.log(`⏰ Reminder cron job started`);
+      console.log(`💾 Database initialized at: ${path.join(process.cwd(), 'data', 'todo.db')}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\n🛑 Shutting down server...');
+  await db.close();
+  process.exit(0);
 });
+
+process.on('SIGTERM', async () => {
+  console.log('\n🛑 Shutting down server...');
+  await db.close();
+  process.exit(0);
+});
+
+startServer();
 
 export default app;

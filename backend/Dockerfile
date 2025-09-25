@@ -15,7 +15,10 @@ COPY . .
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Change ownership of the app directory
+# Create data directory for SQLite database
+RUN mkdir -p /app/data
+
+# Change ownership of the app directory and data directory
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 

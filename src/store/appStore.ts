@@ -71,12 +71,32 @@ export const useAppStore = create<AppState & AppActions>()(
   immer((set, get) => ({
     ...initialState,
     
-    initializeApp: () => {
+    initializeApp: async () => {
       set({ isLoading: true });
-      // Simulate loading time
-      setTimeout(() => {
+      try {
+        // Load projects and tasks from backend
+        const [projectsResponse, tasksResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/projects`),
+          fetch(`${API_BASE_URL}/tasks`)
+        ]);
+
+        const projectsResult = await projectsResponse.json();
+        const tasksResult = await tasksResponse.json();
+
+        if (projectsResult.success && tasksResult.success) {
+          set({ 
+            projects: projectsResult.data,
+            tasks: tasksResult.data,
+            isLoading: false 
+          });
+        } else {
+          console.error('Failed to load data from backend');
+          set({ isLoading: false });
+        }
+      } catch (error) {
+        console.error('Error initializing app:', error);
         set({ isLoading: false });
-      }, 500);
+      }
     },
 
     loadSmtpSettings: async () => {
@@ -284,19 +304,37 @@ export const useAppStore = create<AppState & AppActions>()(
       toast.success('Tasks reordered successfully!');
     },
 
-    addProject: (name: string) => {
+    addProject: async (name: string) => {
       const newProject: Project = {
         id: crypto.randomUUID(),
         name,
         createdAt: Date.now(),
       };
       
-      set(state => {
-        state.projects.push(newProject);
-        state.activeProjectId = newProject.id;
-        state.tasks = [];
-      });
-      toast.success(`Project "${newProject.name}" created.`);
+      try {
+        // Add to backend
+        const response = await fetch(`${API_BASE_URL}/projects`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newProject),
+        });
+
+        if (response.ok) {
+          set(state => {
+            state.projects.push(newProject);
+            state.activeProjectId = newProject.id;
+            state.tasks = [];
+          });
+          toast.success(`Project "${newProject.name}" created.`);
+        } else {
+          toast.error('Failed to create project');
+        }
+      } catch (error) {
+        console.error('Error creating project:', error);
+        toast.error('Failed to create project');
+      }
     },
 
     updateProject: (projectId: string, name: string) => {
