@@ -15,19 +15,24 @@ export function TaskView() {
   const projects = useAppStore((state) => state.projects);
   const reorderTasks = useAppStore((state) => state.reorderTasks);
   const activeProject = useMemo(() => projects.find(p => p.id === activeProjectId), [projects, activeProjectId]);
+  
+  // Filter tasks by active project
+  const projectTasks = useMemo(() => {
+    if (!activeProjectId) return [];
+    return tasks.filter(task => task.projectId === activeProjectId);
+  }, [tasks, activeProjectId]);
+  
   const sortedTasks = useMemo(() => {
-    return [...tasks]
+    return [...projectTasks]
       .sort((a, b) => a.order - b.order);
-  }, [tasks]);
+  }, [projectTasks]);
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
+    if (over && active.id !== over.id && activeProjectId) {
       const oldIndex = sortedTasks.findIndex(task => task.id === active.id);
       const newIndex = sortedTasks.findIndex(task => task.id === over.id);
       if (oldIndex !== -1 && newIndex !== -1) {
-        reorderTasks(oldIndex, newIndex).catch(() => {
-          toast.error("Failed to reorder tasks.");
-        });
+        reorderTasks(oldIndex, newIndex, activeProjectId);
       }
     }
   };
@@ -41,7 +46,7 @@ export function TaskView() {
         </div>
       );
     }
-    if (tasks.length === 0) {
+    if (projectTasks.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-center py-16">
           <ListTodo className="h-16 w-16 text-muted-foreground/50 mb-4" />

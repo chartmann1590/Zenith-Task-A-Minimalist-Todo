@@ -31,7 +31,7 @@ type AppActions = {
   addTask: (title: string) => void;
   updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>) => void;
   deleteTask: (taskId: string) => void;
-  reorderTasks: (oldIndex: number, newIndex: number) => void;
+  reorderTasks: (oldIndex: number, newIndex: number, projectId: string) => void;
   syncTasksWithBackend: () => Promise<void>;
   // Project actions
   addProject: (name: string) => void;
@@ -293,13 +293,20 @@ export const useAppStore = create<AppState & AppActions>()(
       toast.success('Task deleted successfully!');
     },
 
-    reorderTasks: (oldIndex: number, newIndex: number) => {
+    reorderTasks: (oldIndex: number, newIndex: number, projectId: string) => {
       set((state) => {
-        const reorderedTasks = arrayMove(state.tasks, oldIndex, newIndex).map((task, index) => ({
+        // Get tasks for the specific project
+        const projectTasks = state.tasks.filter(task => task.projectId === projectId);
+        const otherTasks = state.tasks.filter(task => task.projectId !== projectId);
+        
+        // Reorder only the project tasks
+        const reorderedProjectTasks = arrayMove(projectTasks, oldIndex, newIndex).map((task, index) => ({
           ...task,
           order: index,
         }));
-        state.tasks = reorderedTasks;
+        
+        // Combine with other tasks
+        state.tasks = [...otherTasks, ...reorderedProjectTasks];
       });
       toast.success('Tasks reordered successfully!');
     },
