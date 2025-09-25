@@ -26,13 +26,18 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    // For development, always allow localhost origins
-    const allowedOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+    // For development, allow localhost and network origins
+    const allowedOrigins = [
+      'http://localhost:3000', 
+      'http://localhost:5173',
+      // Allow any origin for network access (in production, you'd want to restrict this)
+      '*'
+    ];
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -606,8 +611,8 @@ async function startServer() {
       smtpSettings = dbSettings;
     }
     
-    // Start server
-    app.listen(PORT, () => {
+    // Start server on all interfaces
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📧 SMTP configured: ${!!(smtpSettings.host && smtpSettings.user && smtpSettings.pass)}`);
       console.log(`⏰ Reminder cron job started`);

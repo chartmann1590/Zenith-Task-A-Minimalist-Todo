@@ -44,7 +44,7 @@ type AppActions = {
   closeDeleteDialog: () => void;
 };
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:3001/api`;
 
 const initialState: AppState = {
   projects: [
