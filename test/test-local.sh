@@ -226,6 +226,18 @@ else
     print_warning "Reminders API endpoint test failed"
 fi
 
+# Configure SMTP settings for testing
+echo "Configuring SMTP settings for testing..."
+SMTP_RESPONSE=$(curl -s -X POST http://localhost:3001/api/smtp/settings \
+    -H "Content-Type: application/json" \
+    -d '{"host":"smtp.ethereal.email","port":587,"user":"test@example.com","pass":"testpassword","fromEmail":"test@example.com","toEmail":"test@example.com"}')
+
+if echo "$SMTP_RESPONSE" | grep -q "success.*true"; then
+    print_status "SMTP settings configured for testing"
+else
+    print_warning "SMTP settings configuration failed (expected in CI)"
+fi
+
 # Test creating a task
 echo "Testing task creation..."
 TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks/sync \
@@ -236,6 +248,21 @@ if echo "$TASK_RESPONSE" | grep -q "success.*true"; then
     print_status "Task creation test passed"
 else
     print_warning "Task creation test failed"
+fi
+
+# Test reminder creation (this will fail in CI without real SMTP, which is expected)
+echo "Testing reminder creation..."
+REMINDER_RESPONSE=$(curl -s -X POST http://localhost:3001/api/reminders/send/local-test-task)
+
+if echo "$REMINDER_RESPONSE" | grep -q "success.*true"; then
+    print_status "Reminder creation test passed"
+elif echo "$REMINDER_RESPONSE" | grep -q "No recipient email configured\|Invalid login\|SMTP not configured"; then
+    print_warning "Reminder creation test failed (expected in CI without real SMTP credentials)"
+    echo "Response: $REMINDER_RESPONSE"
+else
+    print_error "Reminder creation test failed with unexpected error"
+    echo "Response: $REMINDER_RESPONSE"
+    # Don't exit here as this is expected to fail in CI environments
 fi
 
 # Stop backend server
