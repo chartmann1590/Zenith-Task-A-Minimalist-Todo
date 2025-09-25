@@ -349,17 +349,35 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
-    updateProject: (projectId: string, name: string, icon?: string) => {
-      set(state => {
-        const projectIndex = state.projects.findIndex(p => p.id === projectId);
-        if (projectIndex !== -1) {
-          state.projects[projectIndex].name = name;
-          if (icon !== undefined) {
-            state.projects[projectIndex].icon = icon;
-          }
+    updateProject: async (projectId: string, name: string, icon?: string) => {
+      try {
+        // Update in backend
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name, icon }),
+        });
+
+        if (response.ok) {
+          set(state => {
+            const projectIndex = state.projects.findIndex(p => p.id === projectId);
+            if (projectIndex !== -1) {
+              state.projects[projectIndex].name = name;
+              if (icon !== undefined) {
+                state.projects[projectIndex].icon = icon;
+              }
+            }
+          });
+          toast.success(`Project updated successfully.`);
+        } else {
+          toast.error('Failed to update project');
         }
-      });
-      toast.success(`Project updated successfully.`);
+      } catch (error) {
+        console.error('Error updating project:', error);
+        toast.error('Failed to update project');
+      }
     },
 
     deleteProject: (projectId: string) => {

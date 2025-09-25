@@ -25,7 +25,8 @@ class Database {
           CREATE TABLE IF NOT EXISTS projects (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
-            created_at INTEGER NOT NULL
+            created_at INTEGER NOT NULL,
+            icon TEXT
           )
         `);
 
@@ -74,6 +75,12 @@ class Database {
         `);
 
         // Add new columns if they don't exist (for existing databases)
+        this.db.run(`ALTER TABLE projects ADD COLUMN icon TEXT`, (err) => {
+          if (err && !err.message.includes('duplicate column name')) {
+            console.error('Error adding icon column:', err);
+          }
+        });
+
         this.db.run(`ALTER TABLE smtp_settings ADD COLUMN from_email TEXT`, (err) => {
           if (err && !err.message.includes('duplicate column name')) {
             console.error('Error adding from_email column:', err);
@@ -88,13 +95,13 @@ class Database {
 
         // Insert default projects if they don't exist
         this.db.run(`
-          INSERT OR IGNORE INTO projects (id, name, created_at) 
-          VALUES ('inbox-default-id', 'Inbox', ?)
+          INSERT OR IGNORE INTO projects (id, name, created_at, icon) 
+          VALUES ('inbox-default-id', 'Inbox', ?, 'inbox')
         `, [Date.now()]);
 
         this.db.run(`
-          INSERT OR IGNORE INTO projects (id, name, created_at) 
-          VALUES ('work-default-id', 'Work', ?)
+          INSERT OR IGNORE INTO projects (id, name, created_at, icon) 
+          VALUES ('work-default-id', 'Work', ?, 'briefcase')
         `, [Date.now()]);
 
         console.log('Database initialized successfully');
@@ -111,7 +118,8 @@ class Database {
         else resolve(rows.map(row => ({
           id: row.id,
           name: row.name,
-          createdAt: row.created_at
+          createdAt: row.created_at,
+          icon: row.icon || 'inbox'
         })));
       });
     });
@@ -120,8 +128,8 @@ class Database {
   async addProject(project) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        'INSERT INTO projects (id, name, created_at) VALUES (?, ?, ?)',
-        [project.id, project.name, project.createdAt],
+        'INSERT INTO projects (id, name, created_at, icon) VALUES (?, ?, ?, ?)',
+        [project.id, project.name, project.createdAt, project.icon || 'inbox'],
         function(err) {
           if (err) reject(err);
           else resolve({ id: project.id });
@@ -130,11 +138,11 @@ class Database {
     });
   }
 
-  async updateProject(id, name) {
+  async updateProject(id, name, icon) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        'UPDATE projects SET name = ? WHERE id = ?',
-        [name, id],
+        'UPDATE projects SET name = ?, icon = ? WHERE id = ?',
+        [name, icon || 'inbox', id],
         function(err) {
           if (err) reject(err);
           else resolve({ changes: this.changes });
