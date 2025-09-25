@@ -60,7 +60,9 @@ let smtpSettings = {
   host: process.env.SMTP_HOST || '',
   port: parseInt(process.env.SMTP_PORT) || 587,
   user: process.env.SMTP_USER || '',
-  pass: process.env.SMTP_PASS || ''
+  pass: process.env.SMTP_PASS || '',
+  fromEmail: process.env.FROM_EMAIL || '',
+  toEmail: process.env.TO_EMAIL || ''
 };
 
 // Validation schemas
@@ -68,7 +70,9 @@ const smtpSettingsSchema = Joi.object({
   host: Joi.string().required(),
   port: Joi.number().port().required(),
   user: Joi.string().email().required(),
-  pass: Joi.string().min(1).required()
+  pass: Joi.string().min(1).required(),
+  fromEmail: Joi.string().email().required(),
+  toEmail: Joi.string().email().required()
 });
 
 const taskSchema = Joi.object({
@@ -143,7 +147,7 @@ async function sendEmail(to, subject, html, text) {
   }
 
   const mailOptions = {
-    from: `"${process.env.FROM_NAME || 'Todo Reminder'}" <${process.env.FROM_EMAIL || smtpSettings.user}>`,
+    from: `"${process.env.FROM_NAME || 'Todo Reminder'}" <${smtpSettings.fromEmail || smtpSettings.user}>`,
     to,
     subject,
     html,
@@ -255,8 +259,10 @@ app.get('/api/smtp/settings', async (req, res) => {
         host: settings.host,
         port: settings.port,
         user: settings.user,
+        fromEmail: settings.fromEmail,
+        toEmail: settings.toEmail,
         // Don't send password in response
-        configured: !!(settings.host && settings.user && settings.pass)
+        configured: !!(settings.host && settings.user && settings.pass && settings.fromEmail && settings.toEmail)
       }
     });
   } catch (error) {
@@ -325,10 +331,13 @@ app.post('/api/smtp/test-email', async (req, res) => {
   try {
     const { email } = req.body;
     
-    if (!email) {
+    // Use provided email or fall back to configured toEmail
+    const recipientEmail = email || smtpSettings.toEmail;
+    
+    if (!recipientEmail) {
       return res.status(400).json({
         success: false,
-        error: 'Email address is required'
+        error: 'Email address is required. Please provide an email or configure a default toEmail in SMTP settings.'
       });
     }
 
@@ -341,11 +350,11 @@ app.post('/api/smtp/test-email', async (req, res) => {
 
     const { html, text } = generateReminderEmail(testTask);
     
-    await sendEmail(email, 'Test Email - Todo Reminder', html, text);
+    await sendEmail(recipientEmail, 'Test Email - Todo Reminder', html, text);
     
     res.json({
       success: true,
-      message: 'Test email sent successfully'
+      message: `Test email sent successfully to ${recipientEmail}`
     });
   } catch (error) {
     console.error('Error sending test email:', error);
@@ -487,10 +496,19 @@ app.post('/api/reminders/send/:taskId', async (req, res) => {
       });
     }
 
-    if (!task.reminderEnabled || !task.userEmail) {
+    if (!task.reminderEnabled) {
       return res.status(400).json({
         success: false,
-        error: 'Task does not have reminder enabled or user email'
+        error: 'Task does not have reminder enabled'
+      });
+    }
+
+    // Use task.userEmail if available, otherwise fall back to configured toEmail
+    const recipientEmail = task.userEmail || smtpSettings.toEmail;
+    if (!recipientEmail) {
+      return res.status(400).json({
+        success: false,
+        error: 'No recipient email configured. Please set userEmail on task or configure toEmail in SMTP settings.'
       });
     }
 
@@ -504,7 +522,7 @@ app.post('/api/reminders/send/:taskId', async (req, res) => {
     }
 
     const { html, text } = generateReminderEmail(task);
-    await sendEmail(task.userEmail, `Reminder: ${task.title}`, html, text);
+    await sendEmail(recipientEmail, `Reminder: ${task.title}`, html, text);
     
     res.json({
       success: true,
@@ -549,16 +567,24 @@ cron.schedule('* * * * *', async () => {
         
         if (task && !task.completed && task.reminderEnabled) {
           try {
+            // Use task.userEmail if available, otherwise fall back to configured toEmail
+            const recipientEmail = task.userEmail || smtpSettings.toEmail;
+            
+            if (!recipientEmail) {
+              console.error(`No recipient email configured for task: ${task.title}`);
+              continue;
+            }
+
             // In test environment, skip actual email sending
             if (process.env.NODE_ENV === 'test') {
               await db.markReminderSent(reminder.taskId);
-              console.log(`Reminder would be sent for task: ${task.title} to ${reminder.userEmail} (test mode)`);
+              console.log(`Reminder would be sent for task: ${task.title} to ${recipientEmail} (test mode)`);
             } else {
               const { html, text } = generateReminderEmail(task);
-              await sendEmail(reminder.userEmail, `Reminder: ${task.title}`, html, text);
+              await sendEmail(recipientEmail, `Reminder: ${task.title}`, html, text);
               
               await db.markReminderSent(reminder.taskId);
-              console.log(`Reminder sent for task: ${task.title} to ${reminder.userEmail}`);
+              console.log(`Reminder sent for task: ${task.title} to ${recipientEmail}`);
             }
           } catch (error) {
             console.error(`Failed to send reminder for task ${task.title}:`, error);

@@ -15,6 +15,8 @@ const smtpSettingsSchema = z.object({
   port: z.coerce.number().min(1, 'Port is required'),
   user: z.string().min(1, 'Username is required'),
   pass: z.string().min(1, 'Password is required'),
+  fromEmail: z.string().email('Valid email address is required'),
+  toEmail: z.string().email('Valid email address is required'),
 });
 type SmtpSettingsFormData = z.infer<typeof smtpSettingsSchema>;
 export function SettingsPage() {
@@ -33,6 +35,8 @@ export function SettingsPage() {
       port: 587,
       user: '',
       pass: '',
+      fromEmail: '',
+      toEmail: '',
     },
   });
   useEffect(() => {
@@ -63,14 +67,15 @@ export function SettingsPage() {
   };
 
   const handleSendTestEmail = async () => {
-    if (!testEmail) {
-      toast.error('Please enter an email address');
-      return;
-    }
-    
     setIsTesting(true);
     try {
-      await sendTestEmail(testEmail);
+      // If no test email provided, use the configured toEmail
+      const emailToUse = testEmail || smtpSettings?.toEmail;
+      if (!emailToUse) {
+        toast.error('Please enter an email address or configure a default toEmail in SMTP settings');
+        return;
+      }
+      await sendTestEmail(emailToUse);
     } finally {
       setIsTesting(false);
     }
@@ -91,6 +96,8 @@ export function SettingsPage() {
               Configure SMTP settings for email reminders. Make sure your backend server is running on port 3001.
               <br />
               <strong>Note:</strong> For Gmail, you'll need to use an App Password instead of your regular password.
+              <br />
+              <strong>Email Configuration:</strong> Set the "From Email" to match your SMTP user account, and "To Email" as the default recipient for reminders.
               <br />
               Settings will be saved even if the connection test fails - you can test your credentials separately.
             </CardDescription>
@@ -156,6 +163,38 @@ export function SettingsPage() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="fromEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>From Email Address</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="sender@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-sm text-muted-foreground">
+                        The email address that will appear as the sender of reminder emails.
+                      </p>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="toEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default To Email Address</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="recipient@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-sm text-muted-foreground">
+                        The default email address where reminder emails will be sent. This can be overridden per task.
+                      </p>
+                    </FormItem>
+                  )}
+                />
                 <div className="flex flex-col gap-4">
                   <div className="flex gap-2">
                     <Button 
@@ -176,7 +215,7 @@ export function SettingsPage() {
                     <div className="flex gap-2">
                       <Input
                         type="email"
-                        placeholder="Enter email address"
+                        placeholder={smtpSettings?.toEmail ? `Default: ${smtpSettings.toEmail}` : "Enter email address"}
                         value={testEmail}
                         onChange={(e) => setTestEmail(e.target.value)}
                         className="flex-1"
@@ -185,13 +224,14 @@ export function SettingsPage() {
                         type="button" 
                         variant="secondary"
                         onClick={handleSendTestEmail}
-                        disabled={isTesting || !testEmail}
+                        disabled={isTesting}
                       >
                         {isTesting ? 'Sending...' : 'Send Test'}
                       </Button>
                     </div>
                     <p className="text-sm text-muted-foreground mt-2">
-                      Send a test email to verify your SMTP configuration is working correctly.
+                      Send a test email to verify your SMTP configuration is working correctly. 
+                      {smtpSettings?.toEmail && " Leave empty to use the default toEmail address."}
                     </p>
                   </div>
                 </div>

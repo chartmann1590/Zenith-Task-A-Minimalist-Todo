@@ -31,4 +31,6 @@ export interface SmtpSettings {
   port: number;
   user: string;
   pass: string;
+  fromEmail: string;
+  toEmail: string;
 }
