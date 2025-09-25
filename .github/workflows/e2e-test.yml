@@ -176,10 +176,10 @@ jobs:
         # Test tasks endpoint
         curl -f http://localhost:3001/api/tasks || echo "Tasks endpoint failed"
         
-        # Test creating a task
-        TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks \
+        # Test creating a task (using sync endpoint)
+        TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks/sync \
           -H "Content-Type: application/json" \
-          -d '{"title":"E2E Test Task","description":"Created during E2E testing","dueDate":"2024-12-31T23:59:59.000Z","priority":"medium"}')
+          -d '{"tasks":[{"id":"e2e-test-task","title":"E2E Test Task","dueDate":1735689599000,"priority":"medium","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":false,"reminderTime":null,"userEmail":"test@example.com"}]}')
         
         echo "Task creation response: $TASK_RESPONSE"
         
@@ -187,7 +187,7 @@ jobs:
         curl -f http://localhost:3001/api/reminders || echo "Reminders endpoint failed"
         
         # Test SMTP settings endpoint
-        curl -f http://localhost:3001/api/smtp-settings || echo "SMTP settings endpoint failed"
+        curl -f http://localhost:3001/api/smtp/settings || echo "SMTP settings endpoint failed"
         
     - name: Test frontend-backend integration
       run: |

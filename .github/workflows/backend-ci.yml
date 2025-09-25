@@ -67,7 +67,7 @@ jobs:
         echo "Testing API endpoints..."
         
         # Test SMTP settings endpoint
-        curl -f -X GET http://localhost:3001/api/smtp-settings || echo "SMTP settings endpoint test failed"
+        curl -f -X GET http://localhost:3001/api/smtp/settings || echo "SMTP settings endpoint test failed"
         
         # Test tasks endpoint
         curl -f -X GET http://localhost:3001/api/tasks || echo "Tasks endpoint test failed"
@@ -77,10 +77,10 @@ jobs:
         
     - name: Test API with sample data
       run: |
-        # Test creating a task
-        TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks \
+        # Test creating a task (using sync endpoint)
+        TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks/sync \
           -H "Content-Type: application/json" \
-          -d '{"title":"Test Task","description":"Test Description","dueDate":"2024-12-31T23:59:59.000Z","priority":"medium"}')
+          -d '{"tasks":[{"id":"test-task-1","title":"Test Task","dueDate":1735689599000,"priority":"medium","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":false,"reminderTime":null,"userEmail":"test@example.com"}]}')
         
         if echo "$TASK_RESPONSE" | grep -q "id"; then
           echo "✅ Task creation test passed"
@@ -90,10 +90,10 @@ jobs:
           exit 1
         fi
         
-        # Test creating a reminder
-        REMINDER_RESPONSE=$(curl -s -X POST http://localhost:3001/api/reminders \
+        # Test creating a reminder (using send endpoint)
+        REMINDER_RESPONSE=$(curl -s -X POST http://localhost:3001/api/reminders/send/test-task-1 \
           -H "Content-Type: application/json" \
-          -d '{"taskId":"test-task-id","email":"test@example.com","reminderTime":"2024-12-31T23:59:59.000Z"}')
+          -d '{"email":"test@example.com"}')
         
         if echo "$REMINDER_RESPONSE" | grep -q "id"; then
           echo "✅ Reminder creation test passed"

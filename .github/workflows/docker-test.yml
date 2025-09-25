@@ -161,17 +161,17 @@ jobs:
         echo "Testing API endpoints..."
         curl -f http://localhost:3001/api/tasks
         curl -f http://localhost:3001/api/reminders
-        curl -f http://localhost:3001/api/smtp-settings
+        curl -f http://localhost:3001/api/smtp/settings
         
     - name: Test service communication
       run: |
         # Test if services can communicate
         echo "Testing service communication..."
         
-        # Test creating a task via API
-        TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks \
+        # Test creating a task via API (using sync endpoint)
+        TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks/sync \
           -H "Content-Type: application/json" \
-          -d '{"title":"Integration Test Task","description":"Test from Docker Compose","dueDate":"2024-12-31T23:59:59.000Z","priority":"high"}')
+          -d '{"tasks":[{"id":"integration-test-task","title":"Integration Test Task","dueDate":1735689599000,"priority":"high","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":false,"reminderTime":null,"userEmail":"test@example.com"}]}')
         
         if echo "$TASK_RESPONSE" | grep -q "id"; then
           echo "✅ Task creation via API works"

@@ -228,11 +228,11 @@ fi
 
 # Test creating a task
 echo "Testing task creation..."
-TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks \
+TASK_RESPONSE=$(curl -s -X POST http://localhost:3001/api/tasks/sync \
     -H "Content-Type: application/json" \
-    -d '{"title":"Local Test Task","description":"Created during local testing","dueDate":"2024-12-31T23:59:59.000Z","priority":"medium"}')
+    -d '{"tasks":[{"id":"local-test-task","title":"Local Test Task","dueDate":1735689599000,"priority":"medium","completed":false,"projectId":"test-project","createdAt":1735689599000,"order":0,"reminderEnabled":false,"reminderTime":null,"userEmail":"test@example.com"}]}')
 
-if echo "$TASK_RESPONSE" | grep -q "id"; then
+if echo "$TASK_RESPONSE" | grep -q "success.*true"; then
     print_status "Task creation test passed"
 else
     print_warning "Task creation test failed"
