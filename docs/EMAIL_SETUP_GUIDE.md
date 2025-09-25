@@ -2,6 +2,8 @@
 
 This guide will help you set up email reminders for your Todo app.
 
+> **Note**: For Docker setup with interactive configuration, see [Docker Setup Guide](./DOCKER_SETUP.md)
+
 ## 🚀 Quick Start
 
 ### 1. Start the Application
@@ -237,3 +239,10 @@ Once configured, your Todo app will:
 - ✅ Provide a seamless user experience
 
 Enjoy your enhanced productivity with email reminders! 🚀
+
+## Related Documentation
+
+- [Main README](../README.md) - Project overview and quick start
+- [Docker Setup Guide](./DOCKER_SETUP.md) - Complete Docker setup with interactive configuration
+- [Interactive Setup Features](./INTERACTIVE_SETUP_FEATURES.md) - Interactive configuration guide
+- [Backend Documentation](./BACKEND_README.md) - Backend API documentation

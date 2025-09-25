@@ -34,6 +34,45 @@ Follow these instructions to get the project up and running on your local machin
 - [Node.js](https://nodejs.org/) installed on your machine (for backend)
 - SMTP email account (Gmail recommended)
 
+## 🐳 Docker Setup (Recommended)
+
+The easiest way to get started is using Docker. This will automatically handle all dependencies and setup:
+
+```bash
+# Run the automated Docker setup script
+./docker-setup.sh
+```
+
+This script will:
+- Detect your operating system
+- Install Docker if not present
+- **Interactively configure environment variables** (SMTP settings, email configuration)
+- Set up the complete application environment
+- Start all services automatically
+
+**Application URLs after setup:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001
+- Health Check: http://localhost:3001/api/health
+
+For detailed Docker setup instructions, see [DOCKER_SETUP.md](./docs/DOCKER_SETUP.md). For complete documentation, see [Documentation Index](./docs/README.md).
+
+### Docker Commands
+
+```bash
+# Start the application
+docker compose up -d
+
+# Stop the application
+docker compose down
+
+# View logs
+docker compose logs -f
+
+# Test the setup
+./test-docker-setup.sh
+```
+
 ### Quick Start
 
 1. **Clone the repository:**
@@ -120,6 +159,26 @@ This project is designed for easy deployment to any static hosting platform.
 
 2.  **Deploy to your preferred platform:**
     You can deploy the built files from the `dist` directory to any static hosting platform like Vercel, Netlify, GitHub Pages, or any other hosting service.
+
+## 📚 Documentation
+
+All documentation is organized in the `docs/` folder. See [Documentation Index](./docs/README.md) for a complete overview.
+
+### Quick Links
+
+### Setup & Configuration
+- **[Docker Setup Guide](./docs/DOCKER_SETUP.md)** - Complete Docker setup instructions with interactive configuration
+- **[Interactive Setup Features](./docs/INTERACTIVE_SETUP_FEATURES.md)** - Detailed guide to the interactive setup process
+- **[Email Setup Guide](./docs/EMAIL_SETUP_GUIDE.md)** - SMTP configuration and email reminder setup
+
+### Technical Documentation
+- **[Docker Files Summary](./docs/DOCKER_FILES_SUMMARY.md)** - Overview of all Docker-related files and configurations
+- **[Backend Documentation](./docs/BACKEND_README.md)** - Backend API documentation and setup
+
+### Development
+- **[Prompts](./docs/prompts/)** - AI prompts and usage guidelines
+  - [Selection Prompts](./docs/prompts/selection.md)
+  - [Usage Prompts](./docs/prompts/usage.md)
 
 ## License
 

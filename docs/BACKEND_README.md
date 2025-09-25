@@ -2,6 +2,8 @@
 
 A Node.js backend service for handling email reminders for todo list items.
 
+> **Note**: For Docker setup with interactive configuration, see [Docker Setup Guide](./DOCKER_SETUP.md)
+
 ## Features
 
 - ✅ SMTP configuration and testing
@@ -174,6 +176,13 @@ Set `NODE_ENV=development` for detailed logging.
 4. Configure reverse proxy (nginx)
 5. Use environment variables for secrets
 6. Set up monitoring and alerts
+
+## Related Documentation
+
+- [Main README](../README.md) - Project overview and quick start
+- [Docker Setup Guide](./DOCKER_SETUP.md) - Complete Docker setup with interactive configuration
+- [Email Setup Guide](./EMAIL_SETUP_GUIDE.md) - SMTP configuration and email setup
+- [Interactive Setup Features](./INTERACTIVE_SETUP_FEATURES.md) - Interactive configuration guide
 
 ## License
 
