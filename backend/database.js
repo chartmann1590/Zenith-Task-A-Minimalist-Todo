@@ -67,9 +67,24 @@ class Database {
             port INTEGER,
             user TEXT,
             pass TEXT,
+            from_email TEXT,
+            to_email TEXT,
             CONSTRAINT single_row CHECK (id = 1)
           )
         `);
+
+        // Add new columns if they don't exist (for existing databases)
+        this.db.run(`ALTER TABLE smtp_settings ADD COLUMN from_email TEXT`, (err) => {
+          if (err && !err.message.includes('duplicate column name')) {
+            console.error('Error adding from_email column:', err);
+          }
+        });
+        
+        this.db.run(`ALTER TABLE smtp_settings ADD COLUMN to_email TEXT`, (err) => {
+          if (err && !err.message.includes('duplicate column name')) {
+            console.error('Error adding to_email column:', err);
+          }
+        });
 
         // Insert default projects if they don't exist
         this.db.run(`
@@ -417,14 +432,18 @@ class Database {
             host: row.host || '',
             port: row.port || 587,
             user: row.user || '',
-            pass: row.pass || ''
+            pass: row.pass || '',
+            fromEmail: row.from_email || '',
+            toEmail: row.to_email || ''
           });
         } else {
           resolve({
             host: '',
             port: 587,
             user: '',
-            pass: ''
+            pass: '',
+            fromEmail: '',
+            toEmail: ''
           });
         }
       });
@@ -434,9 +453,9 @@ class Database {
   async updateSmtpSettings(settings) {
     return new Promise((resolve, reject) => {
       this.db.run(
-        `INSERT OR REPLACE INTO smtp_settings (id, host, port, user, pass) 
-         VALUES (1, ?, ?, ?, ?)`,
-        [settings.host, settings.port, settings.user, settings.pass],
+        `INSERT OR REPLACE INTO smtp_settings (id, host, port, user, pass, from_email, to_email) 
+         VALUES (1, ?, ?, ?, ?, ?, ?)`,
+        [settings.host, settings.port, settings.user, settings.pass, settings.fromEmail, settings.toEmail],
         function(err) {
           if (err) reject(err);
           else resolve({ changes: this.changes });

@@ -59,7 +59,9 @@ const initialState: AppState = {
     host: '',
     port: 587,
     user: '',
-    pass: ''
+    pass: '',
+    fromEmail: '',
+    toEmail: ''
   },
   isProjectDialogOpen: false,
   editingProject: null,
@@ -110,7 +112,9 @@ export const useAppStore = create<AppState & AppActions>()(
               host: result.data.host || '',
               port: result.data.port || 587,
               user: result.data.user || '',
-              pass: '' // Don't load password for security
+              pass: '', // Don't load password for security
+              fromEmail: result.data.fromEmail || '',
+              toEmail: result.data.toEmail || ''
             }
           });
         }
