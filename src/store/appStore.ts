@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { Project, Task, SmtpSettings } from '@shared/types';
 import { toast } from 'sonner';
 import { arrayMove } from '@dnd-kit/sortable';
+import { generateUUID } from '@/lib/uuid';
 
 type DialogState = {
   isProjectDialogOpen: boolean;
@@ -254,7 +255,7 @@ export const useAppStore = create<AppState & AppActions>()(
       
       const maxOrder = tasks.reduce((max, task) => Math.max(task.order, max), -1);
       const newTask: Task = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         title,
         completed: false,
         projectId: activeProjectId,
@@ -320,7 +321,7 @@ export const useAppStore = create<AppState & AppActions>()(
 
     addProject: async (name: string, icon?: string) => {
       const newProject: Project = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name,
         createdAt: Date.now(),
         icon: icon || 'inbox',

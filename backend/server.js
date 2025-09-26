@@ -28,24 +28,30 @@ const corsOptions = {
   origin: function (origin, callback) {
     // For development, allow localhost and network origins
     const allowedOrigins = [
-      'http://localhost:3000', 
+      'http://localhost:3000',
       'http://localhost:5173',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:5173'
     ];
-    
+
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     // Allow any network origin for development (you can restrict this in production)
     if (origin && (
-      allowedOrigins.includes(origin) || 
-      origin.startsWith('http://10.') || 
+      allowedOrigins.includes(origin) ||
+      origin.startsWith('http://10.') ||
       origin.startsWith('http://192.168.') ||
-      origin.startsWith('http://172.')
+      origin.startsWith('http://172.') ||
+      origin.startsWith('https://10.') ||
+      origin.startsWith('https://192.168.') ||
+      origin.startsWith('https://172.') ||
+      // Allow any origin with port 3000 for development
+      origin.includes(':3000')
     )) {
       callback(null, true);
     } else {
+      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
