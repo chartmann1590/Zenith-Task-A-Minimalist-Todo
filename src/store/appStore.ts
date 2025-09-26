@@ -37,7 +37,7 @@ type AppActions = {
   // Project actions
   addProject: (name: string, icon?: string) => void;
   updateProject: (projectId: string, name: string, icon?: string) => void;
-  deleteProject: (projectId: string) => void;
+  deleteProject: (projectId: string) => Promise<void>;
   // Dialog actions
   openProjectDialog: (project: Project | null) => void;
   closeProjectDialog: () => void;
@@ -384,21 +384,41 @@ export const useAppStore = create<AppState & AppActions>()(
       }
     },
 
-    deleteProject: (projectId: string) => {
-      const { projects, activeProjectId } = get();
-      
-      set(state => {
-        state.projects = state.projects.filter(p => p.id !== projectId);
-        state.tasks = state.tasks.filter(t => t.projectId !== projectId);
-        
-        if (state.activeProjectId === projectId) {
-          const inbox = state.projects.find(p => p.name === 'Inbox') || state.projects[0];
-          state.activeProjectId = inbox ? inbox.id : null;
-          state.tasks = state.tasks.filter(t => t.projectId === state.activeProjectId);
+    deleteProject: async (projectId: string) => {
+      try {
+        // Delete from backend first
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+
+          // Update local state after successful backend deletion
+          set(state => {
+            state.projects = state.projects.filter(p => p.id !== projectId);
+            state.tasks = state.tasks.filter(t => t.projectId !== projectId);
+
+            if (state.activeProjectId === projectId) {
+              const inbox = state.projects.find(p => p.name === 'Inbox') || state.projects[0];
+              state.activeProjectId = inbox ? inbox.id : null;
+            }
+          });
+
+          const deletedTasksCount = result.data?.deletedTasks || 0;
+          const message = deletedTasksCount > 0
+            ? `Project deleted along with ${deletedTasksCount} task${deletedTasksCount === 1 ? '' : 's'}.`
+            : 'Project deleted.';
+
+          toast.success(message);
+        } else {
+          const errorData = await response.json();
+          toast.error(`Failed to delete project: ${errorData.error}`);
         }
-      });
-      
-      toast.success('Project deleted.');
+      } catch (error) {
+        console.error('Error deleting project:', error);
+        toast.error('Failed to delete project');
+      }
     },
 
     openProjectDialog: (project) => {

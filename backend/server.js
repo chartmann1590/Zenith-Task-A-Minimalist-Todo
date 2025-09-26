@@ -548,6 +548,43 @@ app.put('/api/projects/:id', async (req, res) => {
   }
 });
 
+// Delete project
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // First, delete all tasks associated with this project
+    const tasks = await db.getTasks();
+    const projectTasks = tasks.filter(task => task.project_id === id);
+
+    // Delete all tasks in this project
+    for (const task of projectTasks) {
+      await db.deleteTask(task.id);
+    }
+
+    // Then delete the project itself
+    const result = await db.deleteProject(id);
+
+    if (result.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Project not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { id, deletedTasks: projectTasks.length }
+    });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete project'
+    });
+  }
+});
+
 // Get tasks
 app.get('/api/tasks', async (req, res) => {
   try {
