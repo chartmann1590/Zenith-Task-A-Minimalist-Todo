@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# Debug: Check if script is running
+echo "Starting nginx startup script..."
+echo "Script location: $(pwd)"
+echo "Script permissions: $(ls -la /start-nginx.sh)"
+
 # Wait for backend to be ready with timeout
 echo "Waiting for backend to be ready..."
 MAX_ATTEMPTS=60
