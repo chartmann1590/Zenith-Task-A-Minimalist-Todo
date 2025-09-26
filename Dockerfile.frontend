@@ -42,11 +42,11 @@ RUN echo 'events { worker_connections 1024; }' > /etc/nginx/nginx.conf && \
     echo '}' >> /etc/nginx/nginx.conf
 
 # Verify the startup script exists and is executable
-RUN ls -la /start-nginx.sh && test -x /start-nginx.sh && echo "Startup script verified successfully"
+RUN ls -la /start-nginx.sh && test -x /start-nginx.sh && echo "Startup script verified successfully" || (echo "ERROR: /start-nginx.sh not found or not executable" && exit 1)
 
 # Expose port 80
 EXPOSE 80
 
 # Start nginx with backend check
 # Use exec to ensure proper signal handling
-CMD ["/bin/sh", "-c", "if [ -f /start-nginx.sh ] && [ -x /start-nginx.sh ]; then exec /start-nginx.sh; else echo 'ERROR: /start-nginx.sh not found or not executable'; exit 1; fi"]
+CMD ["/bin/sh", "-c", "if [ -f /start-nginx.sh ] && [ -x /start-nginx.sh ]; then echo 'Starting with /start-nginx.sh'; exec /start-nginx.sh; else echo 'ERROR: /start-nginx.sh not found or not executable'; echo 'Available files in /:'; ls -la /; exit 1; fi"]

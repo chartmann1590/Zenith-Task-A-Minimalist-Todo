@@ -3,7 +3,9 @@
 # Debug: Check if script is running
 echo "Starting nginx startup script..."
 echo "Script location: $(pwd)"
-echo "Script permissions: $(ls -la /start-nginx.sh)"
+echo "Script permissions: $(ls -la /start-nginx.sh 2>/dev/null || echo 'Script not found')"
+echo "Current user: $(whoami)"
+echo "Available commands: $(which wget nginx 2>/dev/null || echo 'Commands not found')"
 
 # Wait for backend to be ready with timeout
 echo "Waiting for backend to be ready..."
@@ -22,10 +24,9 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
 done
 
 if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-  echo "ERROR: Backend did not become ready within $((MAX_ATTEMPTS * 2)) seconds"
-  echo "Backend container logs:"
-  # Try to get backend logs if possible
-  exit 1
+  echo "WARNING: Backend did not become ready within $((MAX_ATTEMPTS * 2)) seconds"
+  echo "Starting nginx anyway - backend may become available later"
+  # Don't exit, just continue with nginx startup
 fi
 
 echo "Backend is ready, starting nginx..."
