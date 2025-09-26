@@ -6,6 +6,8 @@ echo "Script location: $(pwd)"
 echo "Script permissions: $(ls -la /start-nginx.sh 2>/dev/null || echo 'Script not found')"
 echo "Current user: $(whoami)"
 echo "Available commands: $(which wget nginx 2>/dev/null || echo 'Commands not found')"
+echo "Nginx configuration check:"
+ls -la /etc/nginx/ 2>/dev/null || echo "Nginx config directory not found"
 
 # Wait for backend to be ready with timeout
 echo "Waiting for backend to be ready..."
