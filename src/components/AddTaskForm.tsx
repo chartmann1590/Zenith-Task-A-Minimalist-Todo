@@ -23,7 +23,7 @@ export function AddTaskForm() {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Add a task..."
-        className="pl-10 h-12 text-base bg-background/80 backdrop-blur-sm"
+        className="pl-10 h-12 text-base bg-background/80 backdrop-blur-xs"
         aria-label="Add a new task"
       />
     </form>

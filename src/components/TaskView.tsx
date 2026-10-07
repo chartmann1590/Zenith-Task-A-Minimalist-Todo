@@ -74,7 +74,7 @@ export function TaskView() {
           {activeProject?.name || 'Tasks'}
         </h1>
       </header>
-      <ScrollArea className="flex-grow pr-4 -mr-4">
+      <ScrollArea className="grow pr-4 -mr-4">
         {renderContent()}
       </ScrollArea>
       <div className="pt-6">

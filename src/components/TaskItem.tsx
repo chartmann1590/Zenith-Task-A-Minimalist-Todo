@@ -91,7 +91,7 @@ export function TaskItem({ task }: TaskItemProps) {
         className="h-5 w-5 rounded-full"
         aria-label={`Mark task as ${task.completed ? 'incomplete' : 'complete'}`}
       />
-      <div className="flex-grow" onDoubleClick={() => !task.completed && setIsEditing(true)}>
+      <div className="grow" onDoubleClick={() => !task.completed && setIsEditing(true)}>
         {isEditing ? (
           <Input ref={inputRef} value={title} onChange={handleTitleChange} onBlur={handleTitleBlur} onKeyDown={handleTitleKeyDown} className="h-8 text-base" />
         ) : (

@@ -52,7 +52,7 @@ export function Sidebar() {
           <span className="sr-only">New Project</span>
         </Button>
       </div>
-      <ScrollArea className="flex-grow -mx-3">
+      <ScrollArea className="grow -mx-3">
         <nav className="flex flex-col gap-1 px-3">
           {projects.map((project) => (
             <ProjectContextMenu key={project.id} project={project}>

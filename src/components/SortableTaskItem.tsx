@@ -32,7 +32,7 @@ export function SortableTaskItem({ task }: SortableTaskItemProps) {
       >
         <GripVertical className="h-5 w-5" />
       </div>
-      <div className="flex-grow">
+      <div className="grow">
         <TaskItem task={task} />
       </div>
     </div>
