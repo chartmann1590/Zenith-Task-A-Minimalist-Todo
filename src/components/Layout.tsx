@@ -44,7 +44,7 @@ export function Layout() {
     <div className="min-h-screen w-full bg-background text-foreground flex">
       <Sidebar />
       <main className="flex-1 flex flex-col max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex-grow">
+        <div className="grow">
           <TaskView />
         </div>
       </main>
