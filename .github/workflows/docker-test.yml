@@ -120,10 +120,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Install Docker Compose
-      run: |
-        sudo apt-get update
-        sudo apt-get install docker-compose -y
+    # GitHub's runners ship Compose v2 as the `docker compose` plugin; the old
+    # apt `docker-compose` (v1) package is no longer needed.
+    - name: Show Docker Compose version
+      run: docker compose version
       
     - name: Create test environment file
       run: |
@@ -141,7 +141,7 @@ jobs:
     - name: Start services with docker-compose
       run: |
         # Build and start services
-        docker-compose -f docker-compose.yml --env-file .env.test up -d --build
+        docker compose -f docker-compose.yml --env-file .env.test up -d --build
         
         # Wait for services to be ready
         sleep 30
@@ -196,21 +196,21 @@ jobs:
     - name: Check container health
       run: |
         # Check if all containers are healthy
-        docker-compose -f docker-compose.yml ps
+        docker compose -f docker-compose.yml ps
         
         # Check container logs for errors
         echo "=== Frontend Logs ==="
-        docker-compose -f docker-compose.yml logs frontend
+        docker compose -f docker-compose.yml logs frontend
         
         echo "=== Backend Logs ==="
-        docker-compose -f docker-compose.yml logs backend
+        docker compose -f docker-compose.yml logs backend
         
     - name: Stop services
       run: |
-        docker-compose -f docker-compose.yml down -v
+        docker compose -f docker-compose.yml down -v
         
     - name: Cleanup
       if: always()
       run: |
-        docker-compose -f docker-compose.yml down -v --remove-orphans
+        docker compose -f docker-compose.yml down -v --remove-orphans
         docker system prune -f
