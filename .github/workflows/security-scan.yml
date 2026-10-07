@@ -86,13 +86,10 @@ jobs:
       uses: github/codeql-action/analyze@v3
       
     - name: Run Semgrep
-      uses: returntocorp/semgrep-action@v1
-      with:
-        config: >-
-          p/security-audit
-          p/secrets
-          p/owasp-top-ten
-        generateSarif: "1"
+      run: |
+        python3 -m pip install --quiet semgrep
+        semgrep scan --config p/security-audit --config p/secrets --config p/owasp-top-ten \
+          --sarif --output semgrep.sarif --metrics off
         
     - name: Check if Semgrep SARIF exists
       id: check-semgrep
