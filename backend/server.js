@@ -659,6 +659,8 @@ app.post('/api/reminders/send/:taskId', async (req, res) => {
     }
 
     const { html, text } = generateReminderEmail(task);
+    // `safeTitle` was never defined in this handler, so every manual reminder failed with a ReferenceError
+    const safeTitle = escapeHtml(task.title);
     await sendEmail(recipientEmail, `Reminder: ${safeTitle}`, html, text);
     
     res.json({
@@ -733,9 +735,10 @@ cron.schedule('* * * * *', async () => {
         const task = tasks.find(t => t.id === reminder.taskId);
         
         if (task && !task.completed && task.reminderEnabled) {
+          // Sanitize task title for safe logging. Declared outside the try so the catch
+          // block can use it too (it used to throw a ReferenceError there).
+          const safeTitle = escapeHtml(task.title);
           try {
-            // Sanitize task title for safe logging
-            const safeTitle = escapeHtml(task.title);
             
             // Always use the configured default toEmail for reminders
             const recipientEmail = smtpSettings.toEmail;

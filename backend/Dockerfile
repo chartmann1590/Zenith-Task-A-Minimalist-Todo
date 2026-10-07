@@ -1,5 +1,5 @@
 # Backend Dockerfile for Node.js/Express Todo App
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Install wget for health checks
 RUN apk add --no-cache wget
@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Install app dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy source code
 COPY . .
