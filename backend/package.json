@@ -19,7 +19,7 @@
     "joi": "^17.13.8",
     "node-cron": "^4.6.0",
     "node-fetch": "^3.3.2",
-    "nodemailer": "^10.0.16",
+    "nodemailer": "^10.1.4",
     "sqlite3": "^6.0.1"
   },
   "keywords": [
